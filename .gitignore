@@ -1,0 +1,10 @@
+build/
+.cache/
+bin/
+data/
+*.xcf
+*.log
+*.csv
+*.sona
+*.csv#
+
