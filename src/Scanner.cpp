@@ -50,19 +50,34 @@ void Scanner::scanToken() {
         addToken(SEMICOLON);
         break;
     case '*':
-        addToken(MULTIPLY);
+        addToken(match('=') ? MULTPLY_ASS : MULTIPLY);
+        break;
+    case '%':
+        addToken(match('=') ? MODULO_ASS : MODULO);
         break;
     case '-':
-        addToken(
-            match('-') ? (isAlpha(peek()) ? PRE_DECRMNT : POST_DECRMNT)
-                       : (isValue(m_tokens.back()->type()) ? SUBTRACT : NEGATIVE)
-        );
+        if (peek() == '-') {
+            addToken(isAlpha(advance()) ? PRE_DECRMNT : POST_DECRMNT);
+        }
+        else if (peek() == '=') {
+            advance();
+            addToken(SUBTRCT_ASS);
+        }
+        else {
+            addToken(isValue(m_tokens.back()->type()) ? SUBTRACT : NEGATIVE);
+        }
         break;
     case '+':
-        addToken(
-            match('+') ? (isAlpha(peek()) ? PRE_INCRMNT : POST_INCRMNT)
-                       : (isValue(m_tokens.back()->type()) ? ADD : POSITIVE)
-        );
+        if (peek() == '+') {
+            addToken(isAlpha(advance()) ? PRE_INCRMNT : POST_INCRMNT);
+        }
+        else if (peek() == '=') {
+            advance();
+            addToken(ADD_ASS);
+        }
+        else {
+            addToken(isValue(m_tokens.back()->type()) ? ADD : POSITIVE);
+        }
         break;
     case '&':
         if (match('&')) {
@@ -87,8 +102,8 @@ void Scanner::scanToken() {
         addToken(match('=') ? GREATER_EQUAL : GREATER);
         break;
     case '/':
-        if (!match('/')) {
-            addToken(DIVIDE);
+        if (peek() != '/') {
+            addToken(match('=') ? DIVIDE_ASS : DIVIDE);
             break;
         }
 

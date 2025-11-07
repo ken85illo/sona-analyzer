@@ -9,8 +9,6 @@ enum TokenType {
     COMMA,
     DOT,
     SEMICOLON,
-    DIVIDE,
-    MULTIPLY,
 
     // Unary Operator
     NEGATIVE,
@@ -23,6 +21,9 @@ enum TokenType {
     // Binary Operator
     SUBTRACT,
     ADD,
+    DIVIDE,
+    MULTIPLY,
+    MODULO,
 
     // Logical Operators
     AND,
@@ -43,6 +44,7 @@ enum TokenType {
     SUBTRCT_ASS,
     MULTPLY_ASS,
     DIVIDE_ASS,
+    MODULO_ASS,
 
     // Literals
     IDENTIFIER,
