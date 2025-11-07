@@ -27,16 +27,9 @@ public:
     }
 
     void outputToFile(const std::string &path) {
-        std::ofstream output(path);
-
-        if (!output.is_open()) {
-            std::cout << "Unable to create file!\n";
-            return;
-        }
-
         std::cout << "\n";
         std::cout << std::left << std::setw(20) << "[LEXEME]" << "[TOKEN]" << "\n";
-        output << "[LEXEME]," << "[TOKEN]\n";
+
         for (auto &token: m_tokens) {
             std::string tokenStr = token->toString();
             size_t npos = tokenStr.find(",");
@@ -45,7 +38,6 @@ public:
             std::string second = tokenStr.substr(npos + 1);
 
             std::cout << std::left << std::setw(20) << first << second << "\n";
-            output << tokenStr << "\n";
         }
         std::cout << "\n";
     }
