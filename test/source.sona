@@ -1,0 +1,15 @@
+func main() {
+    printf("Hello World!");
+    int i = 10 + 9;
+
+
+    if(i == 19) {
+        printf("dsafj;safsdaflj");
+
+    }
+
+    int y = i + 100 + 20 + 39;
+
+    return 0;
+}
+
