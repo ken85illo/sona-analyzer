@@ -16,7 +16,7 @@ app.post('/api/lexical-analyzer', (req, res) => {
     const text = req.body.text;
 
     // Insert cross communication with CPP executable
-    const cpp = spawn('/bin/Release/sona_lexical_analyzer')
+    const cpp = spawn('../bin/Release/sona_lexical_analyzer.exe')
 
     let output = ""
 
@@ -27,28 +27,26 @@ app.post('/api/lexical-analyzer', (req, res) => {
         output += data.toString();
     });
 
-    // Response template -- correspond to lexeme and tokens DTO
-    const response = {
-        text: output
-    }
+    cpp.stderr.on('data', (data) => {
+        console.error(`C++ error: ${data}`);
+    });
 
-    // Return response statement
-    res.json(response);
-
-    // When C++ finishes
     cpp.on('close', (code) => {
+        console.log(`C++ program exited with code ${code}`);
         res.json({ result: output.trim() });
     });
 
-    // Handle errors
     cpp.on('error', (err) => {
         console.error('Error running C++ program:', err);
         res.status(500).json({ error: 'Failed to run C++ program' });
     });
 
-    // Localhost port
-    const PORT = 8081;
+    
+  })
+  
+// Localhost port
+const PORT = 8081;
 
-    app.listen(PORT, () => {
-        console.log('REST API server running on port 8081');
-    });
+app.listen(PORT, () => {
+    console.log('REST API server running on port 8081');
+});
