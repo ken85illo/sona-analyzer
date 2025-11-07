@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Token.h"
-#include <TokenType.h>
+#include "TokenType.h"
 #include <fstream>
 #include <iomanip>
 #include <iostream>
