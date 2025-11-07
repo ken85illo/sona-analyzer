@@ -4,6 +4,7 @@ const app = express();
 
 const { spawn } = require('child_process');
 
+
 // Middleware for parsing JSON
 app.use(express.json());
 
@@ -16,7 +17,7 @@ app.post('/api/lexical-analyzer', (req, res) => {
     const text = req.body.text;
 
     // Insert cross communication with CPP executable
-    const cpp = spawn('../bin/Release/sona_lexical_analyzer.exe')
+    const cpp = spawn('../bin/Release/sona_lexical_analyzer')
 
     let output = ""
 
@@ -40,10 +41,8 @@ app.post('/api/lexical-analyzer', (req, res) => {
         console.error('Error running C++ program:', err);
         res.status(500).json({ error: 'Failed to run C++ program' });
     });
+})
 
-    
-  })
-  
 // Localhost port
 const PORT = 8081;
 
