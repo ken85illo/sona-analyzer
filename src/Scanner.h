@@ -3,6 +3,7 @@
 #include "Token.h"
 #include <TokenType.h>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <unordered_map>
@@ -33,10 +34,20 @@ public:
             return;
         }
 
+        std::cout << "\n";
+        std::cout << std::left << std::setw(20) << "[LEXEME]" << "[TOKEN]" << "\n";
+        output << "[LEXEME]," << "[TOKEN]\n";
         for (auto &token: m_tokens) {
-            std::cout << token->toString() << "\n";
-            output << token->toString() << "\n";
+            std::string tokenStr = token->toString();
+            size_t npos = tokenStr.find(",");
+
+            std::string first = tokenStr.substr(0, npos);
+            std::string second = tokenStr.substr(npos + 1);
+
+            std::cout << std::left << std::setw(20) << first << second << "\n";
+            output << tokenStr << "\n";
         }
+        std::cout << "\n";
     }
 
 private:

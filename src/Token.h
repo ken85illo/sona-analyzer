@@ -12,7 +12,7 @@ public:
 
     std::string toString() const {
         std::stringstream stream;
-        stream << magic_enum::enum_name(m_type) << ", " << m_lexeme;
+        stream << magic_enum::enum_name(m_type) << "," << m_lexeme;
         return stream.str();
     }
 
