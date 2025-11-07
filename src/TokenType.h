@@ -9,56 +9,75 @@ enum TokenType {
     COMMA,
     DOT,
     SEMICOLON,
+
+    // Unary Operator
+    NEGATIVE,
+    POSITIVE,
+    PRE_DECRMNT,
+    PRE_INCRMNT,
+    POST_INCRMNT,
+    POST_DECRMNT,
+
+    // Binary Operator
+    SUBTRACT,
+    ADD,
     DIVIDE,
     MULTIPLY,
+    MODULO,
 
-    // One or two character tokens
-    MINUS,
-    PLUS,
-    DECREMENT,
-    INCREMENT,
+    // Logical Operators
     AND,
     OR,
     NOT,
+
+    // Relational Operators
     NOT_EQUAL,
-    EQUAL,
-    EQUAL_EQUAL,
+    EQUAL_REL,
     GREATER,
     GREATER_EQUAL,
     LESS,
     LESS_EQUAL,
 
+    // Assignment Operators
+    EQUAL_ASS,
+    ADD_ASS,
+    SUBTRCT_ASS,
+    MULTPLY_ASS,
+    DIVIDE_ASS,
+    MODULO_ASS,
+
     // Literals
     IDENTIFIER,
-    CHAR_STR,
-    NUMBER,
+    STR_LITERAL,
+    INT_LITERAL,
+    FLT_LITERAL,
 
     // Keywords
     BREAK,
     CONTINUE,
-    FOR,
     DO,
+    FOR,
     WHILE,
 
     // Reserved Words
-    INT,
-    DOUBLE,
-    FLOAT,
-    CHAR,
-    STRING,
-    VOID,
-    BOOL,
-    STRUCT,
-    ENUM,
+    BOOL_TYPE,
+    CHAR_TYPE,
     CONST,
-    STATIC,
-    UNSIGNED,
-    RETURN,
-    IF,
-    ELSE,
+    DOUBLE_TYPE,
     ELIF,
-    FUNC,
+    ELSE,
+    ENUM,
+    FLOAT_TYPE,
+    IF,
+    INT_TYPE,
+    MACHINE_TYPE,
+    RETURN,
+    STATIC,
+    STRING_TYPE,
+    STRUCT_TYPE,
+    UNSIGNED,
+    VOID,
 
-    // Error checking stuff
+    // Undefined token
     UNKNOWN,
 };

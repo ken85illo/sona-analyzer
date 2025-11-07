@@ -1,18 +1,15 @@
 #pragma once
 
 #include "Token.h"
+#include <TokenType.h>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <unordered_map>
 #include <vector>
 
 class Scanner {
-
-#define STRINGIFY(x) #x
-#define ADD_TOKEN(x) addToken(STRINGIFY(x))
-#define ADD_TOKEN_TERN(cond, truthy, falsy) (cond) ? STRINGIFY(truthy) : STRINGIFY(falsy)
-
     using TokenRef = std::shared_ptr<Token>;
     using TokenVec = std::vector<TokenRef>;
 
@@ -37,13 +34,24 @@ public:
             return;
         }
 
+        std::cout << "\n";
+        std::cout << std::left << std::setw(20) << "[LEXEME]" << "[TOKEN]" << "\n";
+        output << "[LEXEME]," << "[TOKEN]\n";
         for (auto &token: m_tokens) {
-            output << token->toString() << "\n";
+            std::string tokenStr = token->toString();
+            size_t npos = tokenStr.find(",");
+
+            std::string first = tokenStr.substr(0, npos);
+            std::string second = tokenStr.substr(npos + 1);
+
+            std::cout << std::left << std::setw(20) << first << second << "\n";
+            output << tokenStr << "\n";
         }
+        std::cout << "\n";
     }
 
 private:
-    static const std::unordered_map<std::string, std::string> s_specialWords;
+    static const std::unordered_map<std::string, TokenType> s_specialWords;
 
     const std::string m_source;
     TokenVec m_tokens;
@@ -53,7 +61,7 @@ private:
 
     void scanToken();
 
-    void addToken(const std::string &type) {
+    void addToken(TokenType type) {
         std::string text = substring(start, current);
         m_tokens.emplace_back(new Token(type, text));
     }
@@ -78,7 +86,7 @@ private:
 
         // Skip the last double quote
         advance();
-        ADD_TOKEN(CHAR_STR);
+        addToken(STR_LITERAL);
     }
 
     void number() {
@@ -93,7 +101,7 @@ private:
             }
         }
 
-        ADD_TOKEN(NUMBER);
+        addToken(INT_LITERAL);
     }
 
     void identifier() {
@@ -102,8 +110,7 @@ private:
         }
 
         std::string text = substring(start, current);
-        std::string type =
-            (s_specialWords.find(text) != s_specialWords.end()) ? s_specialWords.at(text) : STRINGIFY(IDENTIFIER);
+        TokenType type = (s_specialWords.find(text) != s_specialWords.end()) ? s_specialWords.at(text) : IDENTIFIER;
         addToken(type);
     }
 
@@ -135,6 +142,14 @@ private:
 
     bool isAlphaNumeric(char c) {
         return isAlpha(c) || isDigit(c);
+    }
+
+    bool isValue(TokenType type) {
+        return type == IDENTIFIER || type == INT_LITERAL || type == FLT_LITERAL;
+    }
+
+    bool isIdentifier(TokenType type) {
+        return type == IDENTIFIER;
     }
 
     std::string substring(uint32_t start, uint32_t end) {

@@ -1,28 +1,27 @@
 #include "Scanner.h"
 
-const std::unordered_map<std::string, std::string> Scanner::s_specialWords = {
-    {    "break",    STRINGIFY(BREAK) },
-    { "continue", STRINGIFY(CONTINUE) },
-    {      "for",      STRINGIFY(FOR) },
-    {       "do",       STRINGIFY(DO) },
-    {    "while",    STRINGIFY(WHILE) },
-    {      "int",      STRINGIFY(INT) },
-    {   "double",   STRINGIFY(DOUBLE) },
-    {    "float",    STRINGIFY(FLOAT) },
-    {     "char",     STRINGIFY(CHAR) },
-    {   "string",   STRINGIFY(STRING) },
-    {     "void",     STRINGIFY(VOID) },
-    {     "bool",     STRINGIFY(BOOL) },
-    {   "struct",   STRINGIFY(STRUCT) },
-    {     "enum",     STRINGIFY(ENUM) },
-    {    "const",    STRINGIFY(CONST) },
-    {   "static",   STRINGIFY(STATIC) },
-    { "unsigned", STRINGIFY(UNSIGNED) },
-    {   "return",   STRINGIFY(RETURN) },
-    {       "if",       STRINGIFY(IF) },
-    {     "else",     STRINGIFY(ELSE) },
-    {     "elif",     STRINGIFY(ELIF) },
-    {     "func",     STRINGIFY(FUNC) }
+const std::unordered_map<std::string, TokenType> Scanner::s_specialWords = {
+    {    "break",       BREAK },
+    { "continue",    CONTINUE },
+    {      "for",         FOR },
+    {       "do",          DO },
+    {    "while",       WHILE },
+    {      "int",    INT_TYPE },
+    {   "double", DOUBLE_TYPE },
+    {    "float",  FLOAT_TYPE },
+    {     "char",   CHAR_TYPE },
+    {   "string", STRING_TYPE },
+    {     "void",        VOID },
+    {     "bool",   BOOL_TYPE },
+    {   "struct", STRUCT_TYPE },
+    {     "enum",        ENUM },
+    {    "const",       CONST },
+    {   "static",      STATIC },
+    { "unsigned",    UNSIGNED },
+    {   "return",      RETURN },
+    {       "if",          IF },
+    {     "else",        ELSE },
+    {     "elif",        ELIF },
 };
 
 void Scanner::scanToken() {
@@ -30,60 +29,83 @@ void Scanner::scanToken() {
 
     switch (c) {
     case '(':
-        ADD_TOKEN(LEFT_PAREN);
+        addToken(LEFT_PAREN);
         break;
     case ')':
-        ADD_TOKEN(RIGHT_PAREN);
+        addToken(RIGHT_PAREN);
         break;
     case '{':
-        ADD_TOKEN(LEFT_BRACE);
+        addToken(LEFT_BRACE);
         break;
     case '}':
-        ADD_TOKEN(RIGHT_BRACE);
+        addToken(RIGHT_BRACE);
         break;
     case ',':
-        ADD_TOKEN(COMMA);
+        addToken(COMMA);
         break;
     case '.':
-        ADD_TOKEN(DOT);
+        addToken(DOT);
         break;
     case ';':
-        ADD_TOKEN(SEMICOLON);
+        addToken(SEMICOLON);
         break;
     case '*':
-        ADD_TOKEN(MULTIPLY);
+        addToken(match('=') ? MULTPLY_ASS : MULTIPLY);
+        break;
+    case '%':
+        addToken(match('=') ? MODULO_ASS : MODULO);
         break;
     case '-':
-        ADD_TOKEN_TERN(match('-'), DECREMENT, MINUS);
+        if (peek() == '-') {
+            advance();
+            addToken(isIdentifier(m_tokens.back()->type()) ? POST_DECRMNT : PRE_DECRMNT);
+        }
+        else if (peek() == '=') {
+            advance();
+            addToken(SUBTRCT_ASS);
+        }
+        else {
+            addToken(isValue(m_tokens.back()->type()) ? SUBTRACT : NEGATIVE);
+        }
         break;
     case '+':
-        ADD_TOKEN_TERN(match('+'), INCREMENT, PLUS);
+        if (peek() == '+') {
+            advance();
+            addToken(isIdentifier(m_tokens.back()->type()) ? POST_INCRMNT : PRE_DECRMNT);
+        }
+        else if (peek() == '=') {
+            advance();
+            addToken(ADD_ASS);
+        }
+        else {
+            addToken(isValue(m_tokens.back()->type()) ? ADD : POSITIVE);
+        }
         break;
     case '&':
         if (match('&')) {
-            ADD_TOKEN(AND);
+            addToken(AND);
         }
         break;
     case '|':
         if (match('|')) {
-            ADD_TOKEN(OR);
+            addToken(OR);
         }
         break;
     case '!':
-        ADD_TOKEN_TERN(match('='), NOT_EQUAL, NOT);
+        addToken(match('=') ? NOT_EQUAL : NOT);
         break;
     case '=':
-        ADD_TOKEN_TERN(match('='), EQUAL_EQUAL, EQUAL);
+        addToken(match('=') ? EQUAL_REL : EQUAL_ASS);
         break;
     case '<':
-        ADD_TOKEN_TERN(match('='), LESS_EQUAL, LESS);
+        addToken(match('=') ? LESS_EQUAL : LESS);
         break;
     case '>':
-        ADD_TOKEN_TERN(match('='), GREATER_EQUAL, GREATER);
+        addToken(match('=') ? GREATER_EQUAL : GREATER);
         break;
-    case '/': {
-        if (!match('/')) {
-            ADD_TOKEN(DIVIDE);
+    case '/':
+        if (peek() != '/') {
+            addToken(match('=') ? DIVIDE_ASS : DIVIDE);
             break;
         }
 
@@ -92,7 +114,6 @@ void Scanner::scanToken() {
             advance();
         }
         break;
-    }
     case ' ':
     case '\r':
     case '\t':
@@ -109,7 +130,7 @@ void Scanner::scanToken() {
             identifier();
         }
         else {
-            ADD_TOKEN(UNKNOWN);
+            addToken(UNKNOWN);
         }
 
         break;
