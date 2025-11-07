@@ -1,9 +1,11 @@
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const app = express();
 
 const { spawn } = require('child_process');
 
+const exePath = path.join(__dirname, '../bin/Release/sona_lexical_analyzer');
 
 // Middleware for parsing JSON
 app.use(express.json());
@@ -17,24 +19,31 @@ app.post('/api/lexical-analyzer', (req, res) => {
     const text = req.body.text;
 
     // Insert cross communication with CPP executable
-    const cpp = spawn('../bin/Release/sona_lexical_analyzer')
+    const cpp = spawn(exePath)
 
     let output = ""
 
     cpp.stdin.write(text + '\n');
+    // console.log(text)
     cpp.stdin.end();
 
     cpp.stdout.on('data', (data) => {
         output += data.toString();
+        // console.log(output)
     });
 
     cpp.stderr.on('data', (data) => {
         console.error(`C++ error: ${data}`);
     });
 
+    const responseDTO = {
+        text: ""
+    }
+
     cpp.on('close', (code) => {
         console.log(`C++ program exited with code ${code}`);
-        res.json({ result: output.trim() });
+        responseDTO.text = output;
+        res.json(responseDTO);
     });
 
     cpp.on('error', (err) => {

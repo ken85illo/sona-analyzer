@@ -4,7 +4,7 @@ const handleSubmit = () => {
 
     // Provide format of JSON to be sent
     const textarea_JSON = {
-        text: textarea_elem.textContent
+        text: textarea_elem.value
     }
 
     console.log("Handle Submit");
@@ -15,7 +15,7 @@ const handleSubmit = () => {
     fetch(URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ textarea_JSON })
+        body: JSON.stringify(textarea_JSON)
     })
         .then(res => res.json())
         .then(data => {
