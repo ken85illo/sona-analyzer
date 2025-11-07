@@ -1,7 +1,8 @@
 @echo off
 cd %~dp0
 cd ..
-mkdir build && cd build
+mkdir build
+cd build
 cmake -G "MinGW Makefiles" ..
 cd ..
 cmake --build build
