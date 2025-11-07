@@ -27,7 +27,7 @@ fi
     if command -v ninja >/dev/null 2>&1; then
         generator="Ninja"
     elif command -v make >/dev/null 2>&1; then
-        generator='"Unix Makefiles"'
+        generator='Unix Makefiles'
     else
         echo "No 'ninja' or 'make' defined in PATH"
         exit 1
