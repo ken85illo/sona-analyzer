@@ -16,6 +16,10 @@ public:
         return stream.str();
     }
 
+    TokenType type() const {
+        return m_type;
+    }
+
 private:
     const TokenType m_type;
     const std::string m_lexeme;

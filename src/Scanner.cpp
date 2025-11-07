@@ -1,28 +1,27 @@
 #include "Scanner.h"
 
 const std::unordered_map<std::string, TokenType> Scanner::s_specialWords = {
-    {    "break",    BREAK },
-    { "continue", CONTINUE },
-    {      "for",      FOR },
-    {       "do",       DO },
-    {    "while",    WHILE },
-    {      "int",      INT },
-    {   "double",   DOUBLE },
-    {    "float",    FLOAT },
-    {     "char",     CHAR },
-    {   "string",   STRING },
-    {     "void",     VOID },
-    {     "bool",     BOOL },
-    {   "struct",   STRUCT },
-    {     "enum",     ENUM },
-    {    "const",    CONST },
-    {   "static",   STATIC },
-    { "unsigned", UNSIGNED },
-    {   "return",   RETURN },
-    {       "if",       IF },
-    {     "else",     ELSE },
-    {     "elif",     ELIF },
-    {     "func",     FUNC }
+    {    "break",       BREAK },
+    { "continue",    CONTINUE },
+    {      "for",         FOR },
+    {       "do",          DO },
+    {    "while",       WHILE },
+    {      "int",    INT_TYPE },
+    {   "double", DOUBLE_TYPE },
+    {    "float",  FLOAT_TYPE },
+    {     "char",   CHAR_TYPE },
+    {   "string", STRING_TYPE },
+    {     "void",        VOID },
+    {     "bool",   BOOL_TYPE },
+    {   "struct", STRUCT_TYPE },
+    {     "enum",        ENUM },
+    {    "const",       CONST },
+    {   "static",      STATIC },
+    { "unsigned",    UNSIGNED },
+    {   "return",      RETURN },
+    {       "if",          IF },
+    {     "else",        ELSE },
+    {     "elif",        ELIF },
 };
 
 void Scanner::scanToken() {
@@ -54,10 +53,16 @@ void Scanner::scanToken() {
         addToken(MULTIPLY);
         break;
     case '-':
-        addToken(match('-') ? DECREMENT : MINUS);
+        addToken(
+            match('-') ? (isAlpha(peek()) ? PRE_DECRMNT : POST_DECRMNT)
+                       : (isValue(m_tokens.back()->type()) ? SUBTRACT : NEGATIVE)
+        );
         break;
     case '+':
-        addToken(match('+') ? INCREMENT : PLUS);
+        addToken(
+            match('+') ? (isAlpha(peek()) ? PRE_INCRMNT : POST_INCRMNT)
+                       : (isValue(m_tokens.back()->type()) ? ADD : POSITIVE)
+        );
         break;
     case '&':
         if (match('&')) {
@@ -73,7 +78,7 @@ void Scanner::scanToken() {
         addToken(match('=') ? NOT_EQUAL : NOT);
         break;
     case '=':
-        addToken(match('=') ? EQUAL_EQUAL : EQUAL);
+        addToken(match('=') ? EQUAL_REL : EQUAL_ASS);
         break;
     case '<':
         addToken(match('=') ? LESS_EQUAL : LESS);
@@ -81,7 +86,7 @@ void Scanner::scanToken() {
     case '>':
         addToken(match('=') ? GREATER_EQUAL : GREATER);
         break;
-    case '/': {
+    case '/':
         if (!match('/')) {
             addToken(DIVIDE);
             break;
@@ -92,7 +97,6 @@ void Scanner::scanToken() {
             advance();
         }
         break;
-    }
     case ' ':
     case '\r':
     case '\t':

@@ -1,4 +1,4 @@
-func main() {
+int main() {
     printf("Hello World!");
     int i = 10 + 9;
 
@@ -8,7 +8,9 @@ func main() {
 
     }
 
-    int y = i + 100 + 20 + 39;
+    int y = -i + 100 + 20 + +39;
+    y++;
+    ++y;
 
     return 0;
 }

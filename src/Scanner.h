@@ -34,6 +34,7 @@ public:
         }
 
         for (auto &token: m_tokens) {
+            std::cout << token->toString() << "\n";
             output << token->toString() << "\n";
         }
     }
@@ -74,7 +75,7 @@ private:
 
         // Skip the last double quote
         advance();
-        addToken(CHAR_STR);
+        addToken(STR_LITERAL);
     }
 
     void number() {
@@ -89,7 +90,7 @@ private:
             }
         }
 
-        addToken(NUMBER);
+        addToken(INT_LITERAL);
     }
 
     void identifier() {
@@ -130,6 +131,10 @@ private:
 
     bool isAlphaNumeric(char c) {
         return isAlpha(c) || isDigit(c);
+    }
+
+    bool isValue(TokenType type) {
+        return type == IDENTIFIER || type == INT_LITERAL || type == FLT_LITERAL;
     }
 
     std::string substring(uint32_t start, uint32_t end) {
