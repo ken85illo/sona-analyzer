@@ -1,28 +1,28 @@
 #include "Scanner.h"
 
-const std::unordered_map<std::string, std::string> Scanner::s_specialWords = {
-    {    "break",    STRINGIFY(BREAK) },
-    { "continue", STRINGIFY(CONTINUE) },
-    {      "for",      STRINGIFY(FOR) },
-    {       "do",       STRINGIFY(DO) },
-    {    "while",    STRINGIFY(WHILE) },
-    {      "int",      STRINGIFY(INT) },
-    {   "double",   STRINGIFY(DOUBLE) },
-    {    "float",    STRINGIFY(FLOAT) },
-    {     "char",     STRINGIFY(CHAR) },
-    {   "string",   STRINGIFY(STRING) },
-    {     "void",     STRINGIFY(VOID) },
-    {     "bool",     STRINGIFY(BOOL) },
-    {   "struct",   STRINGIFY(STRUCT) },
-    {     "enum",     STRINGIFY(ENUM) },
-    {    "const",    STRINGIFY(CONST) },
-    {   "static",   STRINGIFY(STATIC) },
-    { "unsigned", STRINGIFY(UNSIGNED) },
-    {   "return",   STRINGIFY(RETURN) },
-    {       "if",       STRINGIFY(IF) },
-    {     "else",     STRINGIFY(ELSE) },
-    {     "elif",     STRINGIFY(ELIF) },
-    {     "func",     STRINGIFY(FUNC) }
+const std::unordered_map<std::string, TokenType> Scanner::s_specialWords = {
+    {    "break",    BREAK },
+    { "continue", CONTINUE },
+    {      "for",      FOR },
+    {       "do",       DO },
+    {    "while",    WHILE },
+    {      "int",      INT },
+    {   "double",   DOUBLE },
+    {    "float",    FLOAT },
+    {     "char",     CHAR },
+    {   "string",   STRING },
+    {     "void",     VOID },
+    {     "bool",     BOOL },
+    {   "struct",   STRUCT },
+    {     "enum",     ENUM },
+    {    "const",    CONST },
+    {   "static",   STATIC },
+    { "unsigned", UNSIGNED },
+    {   "return",   RETURN },
+    {       "if",       IF },
+    {     "else",     ELSE },
+    {     "elif",     ELIF },
+    {     "func",     FUNC }
 };
 
 void Scanner::scanToken() {
@@ -30,60 +30,60 @@ void Scanner::scanToken() {
 
     switch (c) {
     case '(':
-        ADD_TOKEN(LEFT_PAREN);
+        addToken(LEFT_PAREN);
         break;
     case ')':
-        ADD_TOKEN(RIGHT_PAREN);
+        addToken(RIGHT_PAREN);
         break;
     case '{':
-        ADD_TOKEN(LEFT_BRACE);
+        addToken(LEFT_BRACE);
         break;
     case '}':
-        ADD_TOKEN(RIGHT_BRACE);
+        addToken(RIGHT_BRACE);
         break;
     case ',':
-        ADD_TOKEN(COMMA);
+        addToken(COMMA);
         break;
     case '.':
-        ADD_TOKEN(DOT);
+        addToken(DOT);
         break;
     case ';':
-        ADD_TOKEN(SEMICOLON);
+        addToken(SEMICOLON);
         break;
     case '*':
-        ADD_TOKEN(MULTIPLY);
+        addToken(MULTIPLY);
         break;
     case '-':
-        ADD_TOKEN_TERN(match('-'), DECREMENT, MINUS);
+        addToken(match('-') ? DECREMENT : MINUS);
         break;
     case '+':
-        ADD_TOKEN_TERN(match('+'), INCREMENT, PLUS);
+        addToken(match('+') ? INCREMENT : PLUS);
         break;
     case '&':
         if (match('&')) {
-            ADD_TOKEN(AND);
+            addToken(AND);
         }
         break;
     case '|':
         if (match('|')) {
-            ADD_TOKEN(OR);
+            addToken(OR);
         }
         break;
     case '!':
-        ADD_TOKEN_TERN(match('='), NOT_EQUAL, NOT);
+        addToken(match('=') ? NOT_EQUAL : NOT);
         break;
     case '=':
-        ADD_TOKEN_TERN(match('='), EQUAL_EQUAL, EQUAL);
+        addToken(match('=') ? EQUAL_EQUAL : EQUAL);
         break;
     case '<':
-        ADD_TOKEN_TERN(match('='), LESS_EQUAL, LESS);
+        addToken(match('=') ? LESS_EQUAL : LESS);
         break;
     case '>':
-        ADD_TOKEN_TERN(match('='), GREATER_EQUAL, GREATER);
+        addToken(match('=') ? GREATER_EQUAL : GREATER);
         break;
     case '/': {
         if (!match('/')) {
-            ADD_TOKEN(DIVIDE);
+            addToken(DIVIDE);
             break;
         }
 
@@ -109,7 +109,7 @@ void Scanner::scanToken() {
             identifier();
         }
         else {
-            ADD_TOKEN(UNKNOWN);
+            addToken(UNKNOWN);
         }
 
         break;

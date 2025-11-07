@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Token.h"
+#include <TokenType.h>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -8,11 +9,6 @@
 #include <vector>
 
 class Scanner {
-
-#define STRINGIFY(x) #x
-#define ADD_TOKEN(x) addToken(STRINGIFY(x))
-#define ADD_TOKEN_TERN(cond, truthy, falsy) (cond) ? STRINGIFY(truthy) : STRINGIFY(falsy)
-
     using TokenRef = std::shared_ptr<Token>;
     using TokenVec = std::vector<TokenRef>;
 
@@ -43,7 +39,7 @@ public:
     }
 
 private:
-    static const std::unordered_map<std::string, std::string> s_specialWords;
+    static const std::unordered_map<std::string, TokenType> s_specialWords;
 
     const std::string m_source;
     TokenVec m_tokens;
@@ -53,7 +49,7 @@ private:
 
     void scanToken();
 
-    void addToken(const std::string &type) {
+    void addToken(TokenType type) {
         std::string text = substring(start, current);
         m_tokens.emplace_back(new Token(type, text));
     }
@@ -78,7 +74,7 @@ private:
 
         // Skip the last double quote
         advance();
-        ADD_TOKEN(CHAR_STR);
+        addToken(CHAR_STR);
     }
 
     void number() {
@@ -93,7 +89,7 @@ private:
             }
         }
 
-        ADD_TOKEN(NUMBER);
+        addToken(NUMBER);
     }
 
     void identifier() {
@@ -102,8 +98,7 @@ private:
         }
 
         std::string text = substring(start, current);
-        std::string type =
-            (s_specialWords.find(text) != s_specialWords.end()) ? s_specialWords.at(text) : STRINGIFY(IDENTIFIER);
+        TokenType type = (s_specialWords.find(text) != s_specialWords.end()) ? s_specialWords.at(text) : IDENTIFIER;
         addToken(type);
     }
 
