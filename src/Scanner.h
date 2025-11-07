@@ -137,6 +137,10 @@ private:
         return type == IDENTIFIER || type == INT_LITERAL || type == FLT_LITERAL;
     }
 
+    bool isIdentifier(TokenType type) {
+        return type == IDENTIFIER;
+    }
+
     std::string substring(uint32_t start, uint32_t end) {
         return m_source.substr(start, current - start);
     }

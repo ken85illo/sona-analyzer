@@ -57,7 +57,8 @@ void Scanner::scanToken() {
         break;
     case '-':
         if (peek() == '-') {
-            addToken(isAlpha(advance()) ? PRE_DECRMNT : POST_DECRMNT);
+            advance();
+            addToken(isIdentifier(m_tokens.back()->type()) ? POST_DECRMNT : PRE_DECRMNT);
         }
         else if (peek() == '=') {
             advance();
@@ -69,7 +70,8 @@ void Scanner::scanToken() {
         break;
     case '+':
         if (peek() == '+') {
-            addToken(isAlpha(advance()) ? PRE_INCRMNT : POST_INCRMNT);
+            advance();
+            addToken(isIdentifier(m_tokens.back()->type()) ? POST_INCRMNT : PRE_DECRMNT);
         }
         else if (peek() == '=') {
             advance();
