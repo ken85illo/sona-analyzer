@@ -26,20 +26,10 @@ public:
         return m_tokens;
     }
 
-    void outputToFile(const std::string &path) {
-        std::cout << "\n";
-        std::cout << std::left << std::setw(20) << "[LEXEME]" << "[TOKEN]" << "\n";
-
+    void output() {
         for (auto &token: m_tokens) {
-            std::string tokenStr = token->toString();
-            size_t npos = tokenStr.find(",");
-
-            std::string first = tokenStr.substr(0, npos);
-            std::string second = tokenStr.substr(npos + 1);
-
-            std::cout << std::left << std::setw(20) << first << second << "\n";
+            std::cout << token->toString() << ",";
         }
-        std::cout << "\n";
     }
 
 private:

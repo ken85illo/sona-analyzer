@@ -4,8 +4,10 @@ enum TokenType {
     // Single-character tokens
     LEFT_PAREN,
     RIGHT_PAREN,
-    LEFT_BRACE,
-    RIGHT_BRACE,
+    LEFT_CURLY,
+    RIGHT_CURLY,
+    LEFT_SQUARE,
+    RIGHT_SQUARE,
     COMMA,
     DOT,
     SEMICOLON,
@@ -77,6 +79,13 @@ enum TokenType {
     STRUCT_TYPE,
     UNSIGNED,
     VOID,
+    MAC_CONTEXT,
+    MAC_FINAL,
+    MAC_FINAL_STATE,
+    MAC_START,
+    MAC_STATE,
+    MAC_STATES,
+    MAC_TRANSITIONS,
 
     // Undefined token
     UNKNOWN,

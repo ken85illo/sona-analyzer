@@ -10,5 +10,5 @@ int main(int argc, char *argv[]) {
     std::string input = readFromInput(std::cin);
     Scanner scanner(input);
     scanner.scanTokens();
-    scanner.outputToFile("tokens.csv");
+    scanner.output();
 }

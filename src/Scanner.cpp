@@ -1,27 +1,35 @@
 #include "Scanner.h"
 
 const std::unordered_map<std::string, TokenType> Scanner::s_specialWords = {
-    {    "break",       BREAK },
-    { "continue",    CONTINUE },
-    {      "for",         FOR },
-    {       "do",          DO },
-    {    "while",       WHILE },
-    {      "int",    INT_TYPE },
-    {   "double", DOUBLE_TYPE },
-    {    "float",  FLOAT_TYPE },
-    {     "char",   CHAR_TYPE },
-    {   "string", STRING_TYPE },
-    {     "void",        VOID },
-    {     "bool",   BOOL_TYPE },
-    {   "struct", STRUCT_TYPE },
-    {     "enum",        ENUM },
-    {    "const",       CONST },
-    {   "static",      STATIC },
-    { "unsigned",    UNSIGNED },
-    {   "return",      RETURN },
-    {       "if",          IF },
-    {     "else",        ELSE },
-    {     "elif",        ELIF },
+    {        "break",           BREAK },
+    {     "continue",        CONTINUE },
+    {          "for",             FOR },
+    {           "do",              DO },
+    {        "while",           WHILE },
+    {          "int",        INT_TYPE },
+    {       "double",     DOUBLE_TYPE },
+    {        "float",      FLOAT_TYPE },
+    {         "char",       CHAR_TYPE },
+    {       "string",     STRING_TYPE },
+    {         "void",            VOID },
+    {         "bool",       BOOL_TYPE },
+    {       "struct",     STRUCT_TYPE },
+    {         "enum",            ENUM },
+    {        "const",           CONST },
+    {       "static",          STATIC },
+    {     "unsigned",        UNSIGNED },
+    {       "return",          RETURN },
+    {           "if",              IF },
+    {         "else",            ELSE },
+    {         "elif",            ELIF },
+    {      "Machine",    MACHINE_TYPE },
+    {     "@context",     MAC_CONTEXT },
+    {       "@final",       MAC_FINAL },
+    {  "@finalState", MAC_FINAL_STATE },
+    {       "@start",       MAC_START },
+    {       "@state",       MAC_STATE },
+    {      "@states",      MAC_STATES },
+    { "@transitions", MAC_TRANSITIONS },
 };
 
 void Scanner::scanToken() {
@@ -35,10 +43,16 @@ void Scanner::scanToken() {
         addToken(RIGHT_PAREN);
         break;
     case '{':
-        addToken(LEFT_BRACE);
+        addToken(LEFT_CURLY);
         break;
     case '}':
-        addToken(RIGHT_BRACE);
+        addToken(RIGHT_CURLY);
+        break;
+    case '[':
+        addToken(LEFT_SQUARE);
+        break;
+    case ']':
+        addToken(RIGHT_SQUARE);
         break;
     case ',':
         addToken(COMMA);
@@ -126,7 +140,7 @@ void Scanner::scanToken() {
         if (isDigit(c)) {
             number();
         }
-        else if (isAlpha(c)) {
+        else if (isAlpha(c) || c == '@') {
             identifier();
         }
         else {

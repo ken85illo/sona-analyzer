@@ -19,7 +19,7 @@ const handleSubmit = () => {
     })
         .then(res => res.json())
         .then(data => {
-            document.getElementById("output").textContent = data.text;
+            document.getElementById("output").textContent = data.text
             console.log("Fetch")
         });
 
