@@ -2,32 +2,53 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 
+const { spawn } = require('child_process');
+
 // Middleware for parsing JSON
 app.use(express.json());
 
-// Enable CORS for all routes and origins
 app.use(cors());
+// Enable CORS for all routes and origins
 
 // POST - lexical analyzer endpoint
 app.post('/api/lexical-analyzer', (req, res) => {
-  // Text area value - adjust if text area DTO changes
-  const text = req.body.text;
-  
-  // Insert cross communication with CPP executable
+    // Text area value - adjust if text area DTO changes
+    const text = req.body.text;
 
+    // Insert cross communication with CPP executable
+    const cpp = spawn('/bin/Release/sona_lexical_analyzer')
 
-  // Response template -- correspond to lexeme and tokens DTO
-  const response = {
-    text: "This is backend response"
-  }
-  
-  // Return response statement
-  res.json(response);
-});
+    let output = ""
 
-// Localhost port
-const PORT = 8081;
+    cpp.stdin.write(text + '\n');
+    cpp.stdin.end();
 
-app.listen(PORT, () => {
-  console.log('REST API server running on port 8081');
-});
+    cpp.stdout.on('data', (data) => {
+        output += data.toString();
+    });
+
+    // Response template -- correspond to lexeme and tokens DTO
+    const response = {
+        text: output
+    }
+
+    // Return response statement
+    res.json(response);
+
+    // When C++ finishes
+    cpp.on('close', (code) => {
+        res.json({ result: output.trim() });
+    });
+
+    // Handle errors
+    cpp.on('error', (err) => {
+        console.error('Error running C++ program:', err);
+        res.status(500).json({ error: 'Failed to run C++ program' });
+    });
+
+    // Localhost port
+    const PORT = 8081;
+
+    app.listen(PORT, () => {
+        console.log('REST API server running on port 8081');
+    });

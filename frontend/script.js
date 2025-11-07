@@ -13,15 +13,15 @@ const handleSubmit = () => {
     const URL = `http://localhost:${PORT}/api/lexical-analyzer`;
 
     fetch(URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ textarea_JSON })
-        })
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ textarea_JSON })
+    })
         .then(res => res.json())
         .then(data => {
-          document.getElementById("textarea-element").textContent = data.text;
-          console.log("Fetch")
+            document.getElementById("output").textContent = data.text;
+            console.log("Fetch")
         });
-    
+
     // Handle DTO mapping of received JSON of tokens and lexemes
 }
