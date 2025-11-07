@@ -27,7 +27,7 @@ public:
     }
 
     void outputToFile(const std::string &path) {
-        std::ofstream output(path);
+        //std::ofstream output(path);
 
         if (!output.is_open()) {
             std::cout << "Unable to create file!\n";

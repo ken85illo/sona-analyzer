@@ -6,4 +6,5 @@ data/
 *.csv
 *.sona
 *.csv#
-
+package-lock.json
+node_modules/
