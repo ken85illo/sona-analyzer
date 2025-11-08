@@ -72,6 +72,8 @@ private:
     }
 
     void number() {
+        TokenType type = INT_LITERAL;
+
         while (isDigit(peek())) {
             advance();
         }
@@ -81,9 +83,10 @@ private:
             while (isDigit(peek())) {
                 advance();
             }
+            type = FLT_LITERAL;
         }
 
-        addToken(INT_LITERAL);
+        addToken(type);
     }
 
     void identifier() {
