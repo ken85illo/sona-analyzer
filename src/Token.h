@@ -1,9 +1,6 @@
 #pragma once
 
 #include "TokenType.h"
-#include <magic_enum/magic_enum.hpp>
-#include <sstream>
-#include <string.h>
 
 class Token {
 public:

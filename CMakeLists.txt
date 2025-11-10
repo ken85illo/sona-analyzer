@@ -19,3 +19,5 @@ file(
 
 add_executable(${PROJECT_NAME} ${SOURCE_LIST})
 target_include_directories(${PROJECT_NAME} PRIVATE ${INCLUDE_DIR})
+target_precompile_headers(${PROJECT_NAME} PRIVATE
+                          "$<$<COMPILE_LANGUAGE:CXX>:pch.h>")

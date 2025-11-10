@@ -1,6 +1,4 @@
 #include "Scanner.h"
-#include <fstream>
-#include <iostream>
 
 std::string readFromInput(std::istream &source) {
     return std::string(std::istreambuf_iterator<char>(source), std::istreambuf_iterator<char>());
