@@ -2,7 +2,7 @@
 
 #include "TokenType.h"
 
-namespace StringUtils {
+namespace TokenUtils {
 
 inline bool isDigit(char c) {
     return c >= '0' && c <= '9';
@@ -28,4 +28,4 @@ inline std::string substring(uint32_t start, uint32_t end, const std::string &te
     return text.substr(start, end - start);
 }
 
-} // namespace StringUtils
+} // namespace TokenUtils

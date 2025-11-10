@@ -1,9 +1,9 @@
 #pragma once
 
 #include "SpecialWords.h"
-#include "StringUtils.h"
 #include "Token.h"
 #include "TokenType.h"
+#include "TokenUtils.h"
 #include <set>
 
 class Scanner {
@@ -42,14 +42,14 @@ private:
     void scanToken();
 
     void addToken(TokenType type) {
-        std::string text = StringUtils::substring(start, current, m_source);
+        std::string text = TokenUtils::substring(start, current, m_source);
         m_tokens.emplace_back(new Token(type, text));
     }
 
     void addUserDefinedToken() {
         using namespace std::literals::string_literals;
 
-        std::string text = StringUtils::substring(start, current, m_source);
+        std::string text = TokenUtils::substring(start, current, m_source);
         std::string type = text;
 
         std::transform(type.begin(), type.end(), type.begin(), [](auto c) {
@@ -88,13 +88,13 @@ private:
     void number() {
         TokenType type = INT_LITERAL;
 
-        while (StringUtils::isDigit(peek())) {
+        while (TokenUtils::isDigit(peek())) {
             advance();
         }
 
-        if (peek() == '.' && StringUtils::isDigit(peekNext())) {
+        if (peek() == '.' && TokenUtils::isDigit(peekNext())) {
             advance();
-            while (StringUtils::isDigit(peek())) {
+            while (TokenUtils::isDigit(peek())) {
                 advance();
             }
             type = FLT_LITERAL;
@@ -104,11 +104,11 @@ private:
     }
 
     void identifier() {
-        while (StringUtils::isAlphaNumeric(peek())) {
+        while (TokenUtils::isAlphaNumeric(peek())) {
             advance();
         }
 
-        std::string text = StringUtils::substring(start, current, m_source);
+        std::string text = TokenUtils::substring(start, current, m_source);
 
         if (!m_tokens.empty() && lastToken() == MACHINE_TYPE) {
             addUserDefinedToken();

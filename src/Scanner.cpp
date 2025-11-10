@@ -40,27 +40,27 @@ void Scanner::scanToken() {
     case '-':
         if (peek() == '-') {
             advance();
-            addToken(StringUtils::isIdentifier(lastToken()) ? POST_DECRMNT : PRE_DECRMNT);
+            addToken(TokenUtils::isIdentifier(lastToken()) ? POST_DECRMNT : PRE_DECRMNT);
         }
         else if (peek() == '=') {
             advance();
             addToken(SUBTRCT_ASS);
         }
         else {
-            addToken(StringUtils::isValue(lastToken()) ? SUBTRACT : NEGATIVE);
+            addToken(TokenUtils::isValue(lastToken()) ? SUBTRACT : NEGATIVE);
         }
         break;
     case '+':
         if (peek() == '+') {
             advance();
-            addToken(StringUtils::isIdentifier(lastToken()) ? POST_INCRMNT : PRE_DECRMNT);
+            addToken(TokenUtils::isIdentifier(lastToken()) ? POST_INCRMNT : PRE_DECRMNT);
         }
         else if (peek() == '=') {
             advance();
             addToken(ADD_ASS);
         }
         else {
-            addToken(StringUtils::isValue(lastToken()) ? ADD : POSITIVE);
+            addToken(TokenUtils::isValue(lastToken()) ? ADD : POSITIVE);
         }
         break;
     case '&':
@@ -105,10 +105,10 @@ void Scanner::scanToken() {
         string();
         break;
     default:
-        if (StringUtils::isDigit(c)) {
+        if (TokenUtils::isDigit(c)) {
             number();
         }
-        else if (StringUtils::isAlpha(c) || c == '@') {
+        else if (TokenUtils::isAlpha(c) || c == '@') {
             identifier();
         }
         else {
