@@ -28,4 +28,12 @@ inline std::string substring(uint32_t start, uint32_t end, const std::string &te
     return text.substr(start, end - start);
 }
 
+inline std::string getTypeName(std::string type) {
+    using namespace std::literals::string_literals;
+
+    type += "_TYPE"s;
+
+    return type;
+}
+
 } // namespace TokenUtils

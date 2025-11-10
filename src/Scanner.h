@@ -18,7 +18,7 @@ public:
 
     const TokenVec &scanTokens() {
         while (!isAtEnd()) {
-            start = current;
+            m_start = m_current;
             scanToken();
         }
 
@@ -36,42 +36,36 @@ private:
     TokenVec m_tokens;
     TokenSet m_userDefinedTokens;
 
-    uint32_t start = 0;
-    uint32_t current = 0;
+    uint32_t m_start = 0;
+    uint32_t m_current = 0;
 
     void scanToken();
 
     void addToken(TokenType type) {
-        std::string text = TokenUtils::substring(start, current, m_source);
+        std::string text = TokenUtils::substring(m_start, m_current, m_source);
         m_tokens.emplace_back(new Token(type, text));
     }
 
     void addUserDefinedToken() {
         using namespace std::literals::string_literals;
 
-        std::string text = TokenUtils::substring(start, current, m_source);
-        std::string type = text;
-
-        std::transform(type.begin(), type.end(), type.begin(), [](auto c) {
-            return std::toupper(c);
-        });
-
-        type += "_TYPE"s;
+        std::string text = TokenUtils::substring(m_start, m_current, m_source);
+        std::string type = TokenUtils::getTypeName(text);
 
         m_userDefinedTokens.insert(type);
         m_tokens.emplace_back(new Token(type, text));
     }
 
     bool isAtEnd() const {
-        return current >= m_source.length();
+        return m_current >= m_source.length();
     }
 
     bool match(char expected) {
-        if (isAtEnd() || m_source[current] != expected) {
+        if (isAtEnd() || m_source[m_current] != expected) {
             return false;
         }
 
-        ++current;
+        ++m_current;
         return true;
     }
 
@@ -108,9 +102,16 @@ private:
             advance();
         }
 
-        std::string text = TokenUtils::substring(start, current, m_source);
-
+        // When we declare a machine it must be added to user defined token set
         if (!m_tokens.empty() && lastToken() == MACHINE_TYPE) {
+            addUserDefinedToken();
+            return;
+        }
+
+        std::string text = TokenUtils::substring(m_start, m_current, m_source);
+
+        // Check if a type is user defined
+        if (m_userDefinedTokens.find(TokenUtils::getTypeName(text)) != m_userDefinedTokens.end()) {
             addUserDefinedToken();
             return;
         }
@@ -123,18 +124,18 @@ private:
         if (isAtEnd()) {
             return '\0';
         }
-        return m_source[current];
+        return m_source[m_current];
     }
 
     char peekNext() {
-        if (current + 1 >= m_source.length()) {
+        if (m_current + 1 >= m_source.length()) {
             return '\0';
         }
-        return m_source[current + 1];
+        return m_source[m_current + 1];
     }
 
     char advance() {
-        return m_source[current++];
+        return m_source[m_current++];
     }
 
     TokenType lastToken() const {
