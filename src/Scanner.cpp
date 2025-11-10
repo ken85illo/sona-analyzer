@@ -40,27 +40,27 @@ void Scanner::scanToken() {
     case '-':
         if (peek() == '-') {
             advance();
-            addToken(StringUtils::isIdentifier(m_tokens.back()->type()) ? POST_DECRMNT : PRE_DECRMNT);
+            addToken(StringUtils::isIdentifier(lastToken()) ? POST_DECRMNT : PRE_DECRMNT);
         }
         else if (peek() == '=') {
             advance();
             addToken(SUBTRCT_ASS);
         }
         else {
-            addToken(StringUtils::isValue(m_tokens.back()->type()) ? SUBTRACT : NEGATIVE);
+            addToken(StringUtils::isValue(lastToken()) ? SUBTRACT : NEGATIVE);
         }
         break;
     case '+':
         if (peek() == '+') {
             advance();
-            addToken(StringUtils::isIdentifier(m_tokens.back()->type()) ? POST_INCRMNT : PRE_DECRMNT);
+            addToken(StringUtils::isIdentifier(lastToken()) ? POST_INCRMNT : PRE_DECRMNT);
         }
         else if (peek() == '=') {
             advance();
             addToken(ADD_ASS);
         }
         else {
-            addToken(StringUtils::isValue(m_tokens.back()->type()) ? ADD : POSITIVE);
+            addToken(StringUtils::isValue(lastToken()) ? ADD : POSITIVE);
         }
         break;
     case '&':

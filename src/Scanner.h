@@ -4,10 +4,13 @@
 #include "StringUtils.h"
 #include "Token.h"
 #include "TokenType.h"
+#include <set>
 
 class Scanner {
+
     using TokenRef = std::shared_ptr<Token>;
     using TokenVec = std::vector<TokenRef>;
+    using TokenSet = std::set<std::string>;
 
 public:
     Scanner(const std::string &source)
@@ -31,6 +34,7 @@ public:
 private:
     const std::string m_source;
     TokenVec m_tokens;
+    TokenSet m_userDefinedTokens;
 
     uint32_t start = 0;
     uint32_t current = 0;
@@ -42,7 +46,23 @@ private:
         m_tokens.emplace_back(new Token(type, text));
     }
 
-    bool isAtEnd() {
+    void addUserDefinedToken() {
+        using namespace std::literals::string_literals;
+
+        std::string text = StringUtils::substring(start, current, m_source);
+        std::string type = text;
+
+        std::transform(type.begin(), type.end(), type.begin(), [](auto c) {
+            return std::toupper(c);
+        });
+
+        type += "_TYPE"s;
+
+        m_userDefinedTokens.insert(type);
+        m_tokens.emplace_back(new Token(type, text));
+    }
+
+    bool isAtEnd() const {
         return current >= m_source.length();
     }
 
@@ -89,11 +109,17 @@ private:
         }
 
         std::string text = StringUtils::substring(start, current, m_source);
+
+        if (!m_tokens.empty() && lastToken() == MACHINE_TYPE) {
+            addUserDefinedToken();
+            return;
+        }
+
         TokenType type = (specialWords.find(text) != specialWords.end()) ? specialWords.at(text) : IDENTIFIER;
         addToken(type);
     }
 
-    char peek() {
+    char peek() const {
         if (isAtEnd()) {
             return '\0';
         }
@@ -109,5 +135,12 @@ private:
 
     char advance() {
         return m_source[current++];
+    }
+
+    TokenType lastToken() const {
+        if (m_tokens.back()->type().has_value()) {
+            return *m_tokens.back()->type();
+        }
+        return UNKNOWN;
     }
 };
