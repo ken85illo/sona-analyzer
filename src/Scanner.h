@@ -57,13 +57,7 @@ private:
         using namespace std::literals::string_literals;
 
         std::string text = TokenUtils::substring(m_start, m_current, m_source);
-        std::string type = text;
-
-        std::transform(type.begin(), type.end(), type.begin(), [](auto c) {
-            return std::toupper(c);
-        });
-
-        type += "_TYPE"s;
+        std::string type = TokenUtils::getTypeName(text);
 
         m_userDefinedTokens.insert(type);
         m_tokens.emplace_back(new Token(type, text, m_line));
@@ -115,9 +109,16 @@ private:
             advance();
         }
 
+        // When we declare a machine it must be added to user defined token set
+        if (!m_tokens.empty() && lastToken() == MACHINE_TYPE) {
+            addUserDefinedToken();
+            return;
+        }
+
         std::string text = TokenUtils::substring(m_start, m_current, m_source);
 
-        if (!m_tokens.empty() && lastToken() == MACHINE_TYPE) {
+        // Check if a type is user defined
+        if (m_userDefinedTokens.find(TokenUtils::getTypeName(text)) != m_userDefinedTokens.end()) {
             addUserDefinedToken();
             return;
         }
