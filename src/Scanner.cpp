@@ -97,9 +97,11 @@ void Scanner::scanToken() {
         }
         break;
     case ' ':
-    case '\r':
     case '\t':
+        break;
+    case '\r':
     case '\n':
+        ++m_line;
         break;
     case '"':
         string();
