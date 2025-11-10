@@ -1,37 +1,5 @@
 #include "Scanner.h"
 
-const std::unordered_map<std::string, TokenType> Scanner::s_specialWords = {
-    {        "break",           BREAK },
-    {     "continue",        CONTINUE },
-    {          "for",             FOR },
-    {           "do",              DO },
-    {        "while",           WHILE },
-    {          "int",        INT_TYPE },
-    {       "double",     DOUBLE_TYPE },
-    {        "float",      FLOAT_TYPE },
-    {         "char",       CHAR_TYPE },
-    {       "string",     STRING_TYPE },
-    {         "void",            VOID },
-    {         "bool",       BOOL_TYPE },
-    {       "struct",     STRUCT_TYPE },
-    {         "enum",            ENUM },
-    {        "const",           CONST },
-    {       "static",          STATIC },
-    {     "unsigned",        UNSIGNED },
-    {       "return",          RETURN },
-    {           "if",              IF },
-    {         "else",            ELSE },
-    {         "elif",            ELIF },
-    {      "Machine",    MACHINE_TYPE },
-    {     "@context",     MAC_CONTEXT },
-    {       "@final",       MAC_FINAL },
-    {  "@finalState", MAC_FINAL_STATE },
-    {       "@start",       MAC_START },
-    {       "@state",       MAC_STATE },
-    {      "@states",      MAC_STATES },
-    { "@transitions", MAC_TRANSITIONS },
-};
-
 void Scanner::scanToken() {
     char c = advance();
 
@@ -72,27 +40,27 @@ void Scanner::scanToken() {
     case '-':
         if (peek() == '-') {
             advance();
-            addToken(isIdentifier(m_tokens.back()->type()) ? POST_DECRMNT : PRE_DECRMNT);
+            addToken(StringUtils::isIdentifier(m_tokens.back()->type()) ? POST_DECRMNT : PRE_DECRMNT);
         }
         else if (peek() == '=') {
             advance();
             addToken(SUBTRCT_ASS);
         }
         else {
-            addToken(isValue(m_tokens.back()->type()) ? SUBTRACT : NEGATIVE);
+            addToken(StringUtils::isValue(m_tokens.back()->type()) ? SUBTRACT : NEGATIVE);
         }
         break;
     case '+':
         if (peek() == '+') {
             advance();
-            addToken(isIdentifier(m_tokens.back()->type()) ? POST_INCRMNT : PRE_DECRMNT);
+            addToken(StringUtils::isIdentifier(m_tokens.back()->type()) ? POST_INCRMNT : PRE_DECRMNT);
         }
         else if (peek() == '=') {
             advance();
             addToken(ADD_ASS);
         }
         else {
-            addToken(isValue(m_tokens.back()->type()) ? ADD : POSITIVE);
+            addToken(StringUtils::isValue(m_tokens.back()->type()) ? ADD : POSITIVE);
         }
         break;
     case '&':
@@ -137,10 +105,10 @@ void Scanner::scanToken() {
         string();
         break;
     default:
-        if (isDigit(c)) {
+        if (StringUtils::isDigit(c)) {
             number();
         }
-        else if (isAlpha(c) || c == '@') {
+        else if (StringUtils::isAlpha(c) || c == '@') {
             identifier();
         }
         else {

@@ -1,0 +1,35 @@
+#pragma once
+
+#include "TokenType.h"
+
+const std::unordered_map<std::string, TokenType> specialWords = {
+    {        "break",           BREAK },
+    {     "continue",        CONTINUE },
+    {          "for",             FOR },
+    {           "do",              DO },
+    {        "while",           WHILE },
+    {          "int",        INT_TYPE },
+    {       "double",     DOUBLE_TYPE },
+    {        "float",      FLOAT_TYPE },
+    {         "char",       CHAR_TYPE },
+    {       "string",     STRING_TYPE },
+    {         "void",            VOID },
+    {         "bool",       BOOL_TYPE },
+    {       "struct",     STRUCT_TYPE },
+    {         "enum",            ENUM },
+    {        "const",           CONST },
+    {       "static",          STATIC },
+    {     "unsigned",        UNSIGNED },
+    {       "return",          RETURN },
+    {           "if",              IF },
+    {         "else",            ELSE },
+    {         "elif",            ELIF },
+    {      "Machine",    MACHINE_TYPE },
+    {     "@context",     MAC_CONTEXT },
+    {       "@final",       MAC_FINAL },
+    {  "@finalState", MAC_FINAL_STATE },
+    {       "@start",       MAC_START },
+    {       "@state",       MAC_STATE },
+    {      "@states",      MAC_STATES },
+    { "@transitions", MAC_TRANSITIONS },
+};

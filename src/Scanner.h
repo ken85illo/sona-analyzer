@@ -1,13 +1,9 @@
 #pragma once
 
+#include "SpecialWords.h"
+#include "StringUtils.h"
 #include "Token.h"
 #include "TokenType.h"
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <memory>
-#include <unordered_map>
-#include <vector>
 
 class Scanner {
     using TokenRef = std::shared_ptr<Token>;
@@ -33,8 +29,6 @@ public:
     }
 
 private:
-    static const std::unordered_map<std::string, TokenType> s_specialWords;
-
     const std::string m_source;
     TokenVec m_tokens;
 
@@ -44,7 +38,7 @@ private:
     void scanToken();
 
     void addToken(TokenType type) {
-        std::string text = substring(start, current);
+        std::string text = StringUtils::substring(start, current, m_source);
         m_tokens.emplace_back(new Token(type, text));
     }
 
@@ -74,13 +68,13 @@ private:
     void number() {
         TokenType type = INT_LITERAL;
 
-        while (isDigit(peek())) {
+        while (StringUtils::isDigit(peek())) {
             advance();
         }
 
-        if (peek() == '.' && isDigit(peekNext())) {
+        if (peek() == '.' && StringUtils::isDigit(peekNext())) {
             advance();
-            while (isDigit(peek())) {
+            while (StringUtils::isDigit(peek())) {
                 advance();
             }
             type = FLT_LITERAL;
@@ -90,12 +84,12 @@ private:
     }
 
     void identifier() {
-        while (isAlphaNumeric(peek())) {
+        while (StringUtils::isAlphaNumeric(peek())) {
             advance();
         }
 
-        std::string text = substring(start, current);
-        TokenType type = (s_specialWords.find(text) != s_specialWords.end()) ? s_specialWords.at(text) : IDENTIFIER;
+        std::string text = StringUtils::substring(start, current, m_source);
+        TokenType type = (specialWords.find(text) != specialWords.end()) ? specialWords.at(text) : IDENTIFIER;
         addToken(type);
     }
 
@@ -115,29 +109,5 @@ private:
 
     char advance() {
         return m_source[current++];
-    }
-
-    bool isDigit(char c) {
-        return c >= '0' && c <= '9';
-    }
-
-    bool isAlpha(char c) {
-        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
-    }
-
-    bool isAlphaNumeric(char c) {
-        return isAlpha(c) || isDigit(c);
-    }
-
-    bool isValue(TokenType type) {
-        return type == IDENTIFIER || type == INT_LITERAL || type == FLT_LITERAL;
-    }
-
-    bool isIdentifier(TokenType type) {
-        return type == IDENTIFIER;
-    }
-
-    std::string substring(uint32_t start, uint32_t end) {
-        return m_source.substr(start, current - start);
     }
 };
