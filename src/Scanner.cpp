@@ -120,3 +120,54 @@ void Scanner::scanToken() {
         break;
     }
 }
+
+void Scanner::string() {
+    for (char p = peek(); p != '"' && p != '\0'; p = peek()) {
+        advance();
+    }
+
+    // Skip the last double quote
+    advance();
+    addToken(STR_LITERAL);
+}
+
+void Scanner::number() {
+    TokenType type = INT_LITERAL;
+
+    while (TokenUtils::isDigit(peek())) {
+        advance();
+    }
+
+    if (peek() == '.' && TokenUtils::isDigit(peekNext())) {
+        advance();
+        while (TokenUtils::isDigit(peek())) {
+            advance();
+        }
+        type = FLT_LITERAL;
+    }
+
+    addToken(type);
+}
+
+void Scanner::identifier() {
+    while (TokenUtils::isAlphaNumeric(peek())) {
+        advance();
+    }
+
+    // When we declare a machine it must be added to user defined token set
+    if (!m_tokens.empty() && (lastToken() == MACHINE_TYPE || lastToken() == STRUCT_TYPE)) {
+        addUserDefinedToken();
+        return;
+    }
+
+    std::string text = TokenUtils::substring(m_start, m_current, m_source);
+
+    // Check if a type is user defined
+    if (m_userDefinedTokens.find(TokenUtils::getTypeName(text)) != m_userDefinedTokens.end()) {
+        addUserDefinedToken();
+        return;
+    }
+
+    TokenType type = (specialWords.find(text) != specialWords.end()) ? specialWords.at(text) : IDENTIFIER;
+    addToken(type);
+}
