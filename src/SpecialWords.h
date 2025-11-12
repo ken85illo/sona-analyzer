@@ -13,7 +13,7 @@ const std::unordered_map<std::string, TokenType> specialWords = {
     {        "float",      FLOAT_TYPE },
     {         "char",       CHAR_TYPE },
     {       "string",     STRING_TYPE },
-    {         "void",            VOID },
+    {         "void",       VOID_TYPE },
     {         "bool",       BOOL_TYPE },
     {       "struct",     STRUCT_TYPE },
     {         "enum",            ENUM },

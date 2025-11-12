@@ -78,7 +78,7 @@ enum TokenType {
     STRING_TYPE,
     STRUCT_TYPE,
     UNSIGNED,
-    VOID,
+    VOID_TYPE,
     MAC_CONTEXT,
     MAC_FINAL,
     MAC_FINAL_STATE,

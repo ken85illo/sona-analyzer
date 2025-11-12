@@ -109,7 +109,7 @@ private:
         }
 
         // When we declare a machine it must be added to user defined token set
-        if (!m_tokens.empty() && lastToken() == MACHINE_TYPE) {
+        if (!m_tokens.empty() && (lastToken() == MACHINE_TYPE || lastToken() == STRUCT_TYPE)) {
             addUserDefinedToken();
             return;
         }
