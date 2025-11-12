@@ -4,7 +4,6 @@
 #include "Token.h"
 #include "TokenType.h"
 #include "TokenUtils.h"
-#include <set>
 
 class Scanner {
 

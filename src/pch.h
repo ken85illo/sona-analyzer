@@ -14,5 +14,5 @@
 #include <vector>
 
 // Magic Enum
-//
 #include <magic_enum/magic_enum.hpp>
+#include <set>
