@@ -7,8 +7,19 @@
         <link rel="stylesheet" href="style.css" />
     </head>
     <body>
-        <textarea id="textarea-element" placeholder="enter program"></textarea>
-        <button onclick="handleSubmit()">submit</button>
+        <button onclick="handleSubmit()">ANALYZE CODE</button>
+        <div class="main-container">    
+            <textarea id="textarea-element" placeholder="enter program" wrap="off"></textarea>
+            <div class="lexical-analysis-container">
+                <p>Analysis</p>
+                <table id="lexical-elements-table">
+                    <tr>
+                        <th>Line</th>
+                        <th>"Token": "Lexeme"</th>
+                    </tr>
+                </table>
+            </div>
+        </div>
 
         <br />
         <br />

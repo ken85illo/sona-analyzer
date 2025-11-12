@@ -1,4 +1,14 @@
-#textarea-element {
-    width: 100%;
+.main-container {
+    display: flex;
+}
+
+#textarea-element, #lexical-elements-table {
+    width: 65%;
+    max-height: 300px;
+    overflow-y: scroll;
+}
+
+.lexical-analysis-container {
+    width: 35%;
     height: 300px;
 }

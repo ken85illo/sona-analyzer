@@ -4,6 +4,7 @@ const cors = require('cors');
 const app = express();
 
 function processLexemeAndTokens(output) {
+    console.log(output);
     // g indicates a global search, d indicates the index of that string match
     const find_line_number_regex = /\[\d+\],/gd;
 

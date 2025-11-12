@@ -3,6 +3,27 @@ const textarea_elem = document.getElementById("textarea-element");
 const PORT = 8081;
 const URL = `http://localhost:${PORT}/api/lexical-analyzer`;
 
+const displayLexicalElements = (lexicalAnalysis) => {
+    const table_elem = document.getElementById("lexical-elements-table");
+    
+    for(const line of lexicalAnalysis) {
+        const line_number = line.line;
+        
+        for(const lexical_element of line.elements) {
+            const token_lexeme = `${lexical_element.token}: ${lexical_element.lexeme}`;
+
+            const table_row = `
+                <tr>
+                    <td>${line_number}</td>
+                    <td>${token_lexeme}</td>
+                </tr>
+            `;
+            
+            table_elem.innerHTML += table_row;
+        }
+    }
+}
+
 const lexicalAnalyzer = async (text_JSON) => {
     try {
         const rawResponse = await fetch(URL, {
@@ -15,6 +36,7 @@ const lexicalAnalyzer = async (text_JSON) => {
 
         const lexicalAnalysis = await rawResponse.json();
         console.log(lexicalAnalysis);
+        displayLexicalElements(lexicalAnalysis);
     } catch (err) {
         console.error("Fetch error:", err);
     }
@@ -31,3 +53,20 @@ const handleSubmit = () => {
 
     lexicalAnalyzer(text_JSON);
 }
+
+// Adds tabs instead of manually adding white-spaces
+textarea_elem.addEventListener('keydown', (e) => {
+    if(e.key === 'Tab') {
+        e.preventDefault();
+
+        const start = textarea_elem.selectionStart;
+        const end = textarea_elem.selectionEnd;
+
+        // Insert tab at cursor position
+        textarea_elem.value =
+            textarea_elem.value.substring(0, start) + "\t" + textarea_elem.value.substring(end);
+
+        // Move the cursor after the inserted tab
+        textarea_elem.selectionStart = textarea_elem.selectionEnd = start + 1;
+    }
+})
