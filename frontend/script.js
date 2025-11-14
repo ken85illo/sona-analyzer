@@ -1,15 +1,17 @@
 const textarea_elem = document.getElementById("textarea-element");
+const table_elem = document.getElementById("lexical-elements-table");
+const defaultContent = table_elem.innerHTML
 
 const PORT = 8081;
 const URL = `http://localhost:${PORT}/api/lexical-analyzer`;
 
 const displayLexicalElements = (lexicalAnalysis) => {
-    const table_elem = document.getElementById("lexical-elements-table");
-    
-    for(const line of lexicalAnalysis) {
+    table_elem.innerHTML = defaultContent
+
+    for (const line of lexicalAnalysis) {
         const line_number = line.line;
-        
-        for(const lexical_element of line.elements) {
+
+        for (const lexical_element of line.elements) {
             const token_lexeme = `${lexical_element.token}: ${lexical_element.lexeme}`;
 
             const table_row = `
@@ -18,7 +20,7 @@ const displayLexicalElements = (lexicalAnalysis) => {
                     <td>${token_lexeme}</td>
                 </tr>
             `;
-            
+
             table_elem.innerHTML += table_row;
         }
     }
@@ -56,7 +58,7 @@ const handleSubmit = () => {
 
 // Adds tabs instead of manually adding white-spaces
 textarea_elem.addEventListener('keydown', (e) => {
-    if(e.key === 'Tab') {
+    if (e.key === 'Tab') {
         e.preventDefault();
 
         const start = textarea_elem.selectionStart;
