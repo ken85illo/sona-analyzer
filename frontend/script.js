@@ -1,14 +1,21 @@
 const textarea_elem = document.getElementById("textarea-element");
 const table_elem = document.getElementById("lexical-elements-table");
 const defaultContent = table_elem.innerHTML
+const lineSpinner = document.getElementById("line-number")
+let lexicalAnalysis = null
 
 const PORT = 8081;
 const URL = `http://localhost:${PORT}/api/lexical-analyzer`;
 
-const displayLexicalElements = (lexicalAnalysis) => {
-    table_elem.innerHTML = defaultContent
+const displayLexicalElements = () => {
+    if (lexicalAnalysis === null) {
+        return
+    }
 
-    for (const line of lexicalAnalysis) {
+    table_elem.innerHTML = defaultContent
+    const filteredLines = lexicalAnalysis.filter((current) => current.line == lineSpinner.value)
+
+    for (const line of filteredLines) {
         const line_number = line.line;
 
         for (const lexical_element of line.elements) {
@@ -36,11 +43,11 @@ const lexicalAnalyzer = async (text_JSON) => {
 
         if (!rawResponse.ok) throw new Error("Server error");
 
-        const lexicalAnalysis = await rawResponse.json();
+        lexicalAnalysis = await rawResponse.json();
         console.log(lexicalAnalysis);
-        displayLexicalElements(lexicalAnalysis);
-    } catch (err) {
+        displayLexicalElements();
         console.error("Fetch error:", err);
+    } catch (err) {
     }
 };
 
@@ -71,4 +78,8 @@ textarea_elem.addEventListener('keydown', (e) => {
         // Move the cursor after the inserted tab
         textarea_elem.selectionStart = textarea_elem.selectionEnd = start + 1;
     }
+})
+
+lineSpinner.addEventListener('change', (e) => {
+    displayLexicalElements()
 })

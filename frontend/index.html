@@ -8,9 +8,22 @@
     </head>
     <body>
         <button onclick="handleSubmit()">ANALYZE CODE</button>
-        <div class="main-container">    
-            <textarea id="textarea-element" placeholder="enter program" wrap="off"></textarea>
+        <div class="main-container">
+            <textarea
+                id="textarea-element"
+                placeholder="enter program"
+                wrap="off"
+            ></textarea>
+
             <div class="lexical-analysis-container">
+                <input
+                    type="number"
+                    id="line-number"
+                    min="1"
+                    max="100"
+                    value="1"
+                    step="1"
+                />
                 <p>Analysis</p>
                 <table id="lexical-elements-table">
                     <tr>

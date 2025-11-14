@@ -15,20 +15,20 @@ function processLexemeAndTokens(output) {
     */
     const CODE_LINE_INDICES_LIST = [];
 
-    for (const match of output.matchAll(find_line_number_regex)) {    
+    for (const match of output.matchAll(find_line_number_regex)) {
         CODE_LINE_INDICES_LIST.push({
             current_line: match[0],
             index: match.indices[0][0],
-            line_last_index: 0    
+            line_last_index: 0
         })
     }
 
     // Sets upper boundary of the line. Indicates up to what index a line consumes.
-    for(let i = CODE_LINE_INDICES_LIST.length - 1 ; i > 0 ; i--) {
+    for (let i = CODE_LINE_INDICES_LIST.length - 1; i > 0; i--) {
         let current_line_object = CODE_LINE_INDICES_LIST.at(i);
 
-        if(i === CODE_LINE_INDICES_LIST.length - 1) {
-            current_line_object.line_last_index = output.length-1;
+        if (i === CODE_LINE_INDICES_LIST.length - 1) {
+            current_line_object.line_last_index = output.length - 1;
         }
 
         // Gets the line object stored at index i - 1 in CODE_LINE_INDICES_LIST 
@@ -43,10 +43,10 @@ function processLexemeAndTokens(output) {
     // List to hold token/lexeme
     const TOKENS_AND_LEXEME_LIST = [];
 
-    for (const match of output.matchAll(tokens_and_lexeme_regex)) {    
+    for (const match of output.matchAll(tokens_and_lexeme_regex)) {
         // Parses the pattern to an int. #7 -> 7, #15 -> 15.
         const token_lexeme_length = 0 + parseInt(output.substring(match.indices[0][0] + 1, match.indices[0][1]));
-        
+
         // Gets the actual token/lexeme string
         const token_lexeme = output.substring(match.indices[0][1] + 1, match.indices[0][1] + token_lexeme_length + 1);
 
@@ -62,12 +62,12 @@ function processLexemeAndTokens(output) {
     // Tracks the current token/lexeme from the TOKEN
     let token_lexeme_counter = 0;
 
-    for(const line of CODE_LINE_INDICES_LIST) {
-        
+    for (const line of CODE_LINE_INDICES_LIST) {
+
         // Placeholder object to be stored in 
         const obj = {
             line: line.current_line.substring(1, line.current_line.length - 2), // [2] -> 2
-            elements: [] 
+            elements: []
         };
 
         // Gets the index of where the line ends. Example: Line 1 of the program ends at index 17.
@@ -75,17 +75,17 @@ function processLexemeAndTokens(output) {
 
         // Grabs the first token
         let current_token_lexeme = TOKENS_AND_LEXEME_LIST.at(token_lexeme_counter);
-        
+
         // Iterates until it visits all token/lexemes stored at TOKENS_AND_LEXEME_LIST, or it reaches the end of the line index
-        while(token_lexeme_counter < TOKENS_AND_LEXEME_LIST.length && current_token_lexeme.index < end_of_line) {
+        while (token_lexeme_counter < TOKENS_AND_LEXEME_LIST.length && current_token_lexeme.index < end_of_line) {
             const lexical_elements = {
                 token: current_token_lexeme.token_lexeme, // Sets the token
                 lexeme: ""
             };
-            
+
             token_lexeme_counter++;
             current_token_lexeme = TOKENS_AND_LEXEME_LIST.at(token_lexeme_counter); // Grabs the lexeme
-            
+
             lexical_elements.lexeme = current_token_lexeme.token_lexeme; // Sets the lexeme
 
             obj.elements.push(lexical_elements);
@@ -99,7 +99,7 @@ function processLexemeAndTokens(output) {
 
     }
 
-    for(const line of LINE_TOKENS_AND_LEXEMES_JSON) {
+    for (const line of LINE_TOKENS_AND_LEXEMES_JSON) {
         console.log(line);
     }
 
@@ -128,7 +128,7 @@ app.post('/api/lexical-analyzer', (req, res) => {
 
     cpp.stdin.write(text + '\n');
     // console.log(text)
-    
+
     cpp.stdin.end();
 
     cpp.stdout.on('data', (data) => {
