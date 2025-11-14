@@ -1,7 +1,7 @@
 const textarea_elem = document.getElementById("textarea-element");
 const table_elem = document.getElementById("lexical-elements-table");
-const defaultContent = table_elem.innerHTML
 const lineSpinner = document.getElementById("line-number")
+const defaultContent = table_elem.innerHTML
 let lexicalAnalysis = null
 
 const PORT = 8081;
@@ -44,6 +44,14 @@ const lexicalAnalyzer = async (text_JSON) => {
         if (!rawResponse.ok) throw new Error("Server error");
 
         lexicalAnalysis = await rawResponse.json();
+        lineSpinner.value = 1
+        lineSpinner.max = String(lexicalAnalysis.reduce((max, current) => {
+            const currentLine = parseInt(current.line)
+            if (currentLine > max) {
+                return currentLine
+            }
+            return max
+        }, 0))
         console.log(lexicalAnalysis);
         displayLexicalElements();
         console.error("Fetch error:", err);
