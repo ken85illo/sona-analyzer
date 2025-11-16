@@ -87,6 +87,10 @@ enum TokenType {
     MAC_STATES,
     MAC_TRANSITIONS,
 
+    // Comments
+    LINE_COMNT,
+    MULTILINE_COMNT,
+
     // Undefined token
     UNKNOWN,
 };

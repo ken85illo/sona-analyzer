@@ -86,20 +86,36 @@ void Scanner::scanToken() {
         addToken(match('=') ? GREATER_EQUAL : GREATER);
         break;
     case '/':
-        if (peek() != '/') {
+        if (peek() == '/') {
+            // Add line comment token
+            for (char p = peek(); p != '\n' && p != '\0'; p = peek()) {
+                advance();
+            }
+            addToken(LINE_COMNT);
+        }
+        else if (peek() == '*') {
+            // Add multiline comment token
+
+            // skip the first *
+            advance();
+            for (char p = peek(), pn = peekNext(); p != '*' && pn != '/'; p = peek(), pn = peekNext()) {
+                advance();
+            }
+
+            // skip the remaining *  and /
+            advance();
+            advance();
+
+            addToken(MULTILINE_COMNT);
+        }
+        else {
             addToken(match('=') ? DIVIDE_ASS : DIVIDE);
-            break;
         }
         /*if (peek() == '/'){
             add comment logic here
             break;
             }*/
 
-        // Skip inline comments
-        for (char p = peek(); p != '\n' && p != '\0'; p = peek()) {
-            advance();
-        }
-        break;
     case ' ':
     case '\t':
         break;
