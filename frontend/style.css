@@ -12,3 +12,13 @@
     width: 35%;
     height: 300px;
 }
+.CodeMirror {
+    height: 500px;      /* or any fixed height */
+    width: 1000px;       /* or 100%, or any value */
+    border: 1px solid #444;
+    font-size: 16px;
+}
+body {
+    background-color: #282828;   /* Gruvbox Dark background */
+    color: #ebdbb2; 
+}

@@ -4,9 +4,14 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Document</title>
-        <link rel="stylesheet" href="style.css" />
+        <link rel="stylesheet" href="style.css"/>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/gruvbox-dark.min.css">
     </head>
     <body>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+        
         <button onclick="handleSubmit()">ANALYZE CODE</button>
         <div class="main-container">
             <textarea
@@ -14,7 +19,17 @@
                 placeholder="enter program"
                 wrap="off"
             ></textarea>
-            
+            <script>
+            //used codemirror as the editor alias
+            const editor = CodeMirror.fromTextArea(document.getElementById("textarea-element"), {
+                lineNumbers: true,
+                mode: "text/x-csrc",
+                theme: "gruvbox-dark",     
+                tabSize: 100,
+                indentUnit: 4,
+                indentWithTabs: true
+            });
+        </script>
             <div class="lexical-analysis-container">
                 <button onclick="switchView()">Switch View</button>
                 <input

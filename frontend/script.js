@@ -98,7 +98,7 @@ const handleSubmit = () => {
 
     // Provide format of JSON to be sent
     const text_JSON = {
-        text: textarea_elem.value
+        text: editor.getValue()//replaced the element
     }
 
     console.log("Handle Submit");
@@ -126,3 +126,6 @@ textarea_elem.addEventListener('keydown', (e) => {
 lineSpinner.addEventListener('change', (e) => {
     displayLexicalElements()
 })
+
+
+

@@ -90,6 +90,10 @@ void Scanner::scanToken() {
             addToken(match('=') ? DIVIDE_ASS : DIVIDE);
             break;
         }
+        /*if (peek() == '/'){
+            add comment logic here
+            break;
+            }*/
 
         // Skip inline comments
         for (char p = peek(); p != '\n' && p != '\0'; p = peek()) {
