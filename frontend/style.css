@@ -22,3 +22,16 @@ body {
     background-color: #282828;   /* Gruvbox Dark background */
     color: #ebdbb2; 
 }
+
+.bttn {
+    background-color: #ff2f2f;   /* Gruvbox Dark background */
+    color: #000; 
+    border: solid 1px #ff2f2f;
+    padding: .5em;
+    border-radius: 10px;
+}
+
+.bttn:hover {
+    opacity: .8;
+    cursor: pointer;
+}

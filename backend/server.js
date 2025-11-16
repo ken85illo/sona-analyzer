@@ -23,18 +23,24 @@ function processLexemeAndTokens(output) {
         })
     }
 
-    // Sets upper boundary of the line. Indicates up to what index a line consumes.
-    for (let i = CODE_LINE_INDICES_LIST.length - 1; i > 0; i--) {
-        let current_line_object = CODE_LINE_INDICES_LIST.at(i);
+    if(CODE_LINE_INDICES_LIST.length === 1) {
+        CODE_LINE_INDICES_LIST[0].line_last_index = output.length - 1;
+    }
 
-        if (i === CODE_LINE_INDICES_LIST.length - 1) {
-            current_line_object.line_last_index = output.length - 1;
+    else {
+        // Sets upper boundary of the line. Indicates up to what index a line consumes.
+        for (let i = CODE_LINE_INDICES_LIST.length - 1; i > 0; i--) {
+            let current_line_object = CODE_LINE_INDICES_LIST.at(i);
+            
+            if (i === CODE_LINE_INDICES_LIST.length - 1) {
+                current_line_object.line_last_index = output.length - 1;
+            }
+            
+            // Gets the line object stored at index i - 1 in CODE_LINE_INDICES_LIST 
+            let next_line_object = CODE_LINE_INDICES_LIST.at(i - 1);
+            
+            next_line_object.line_last_index = current_line_object.index - 1;
         }
-
-        // Gets the line object stored at index i - 1 in CODE_LINE_INDICES_LIST 
-        let next_line_object = CODE_LINE_INDICES_LIST.at(i - 1);
-
-        next_line_object.line_last_index = current_line_object.index - 1;
     }
 
     // Regex for locating the beginning of a token/lexeme
@@ -44,7 +50,7 @@ function processLexemeAndTokens(output) {
     const TOKENS_AND_LEXEME_LIST = [];
 
     for (const match of output.matchAll(tokens_and_lexeme_regex)) {
-        // Parses the pattern to an int. #7 -> 7, #15 -> 15.
+        // Parses the pattern to an int. #7 -> 7, #15 -> 15.    
         const token_lexeme_length = 0 + parseInt(output.substring(match.indices[0][0] + 1, match.indices[0][1]));
 
         // Gets the actual token/lexeme string
