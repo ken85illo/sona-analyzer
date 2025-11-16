@@ -3,6 +3,7 @@ const table_elem = document.getElementById("lexical-elements-table");
 const lineSpinner = document.getElementById("line-number")
 const defaultContent = table_elem.innerHTML
 let lexicalAnalysis = null
+let view = 0;
 
 const PORT = 8081;
 const URL = `http://localhost:${PORT}/api/lexical-analyzer`;
@@ -11,6 +12,7 @@ const displayLexicalElements = () => {
     if (lexicalAnalysis === null) {
         return
     }
+    lineSpinner.disabled = false;
 
     table_elem.innerHTML = defaultContent
     const filteredLines = lexicalAnalysis.filter((current) => current.line == lineSpinner.value)
@@ -32,7 +34,31 @@ const displayLexicalElements = () => {
         }
     }
 }
+const displayAllLexicalElements = () => {
+    if (lexicalAnalysis === null) {
+        return
+    }
+    lineSpinner.disabled = true;
+        // Reset table to default header
+    table_elem.innerHTML = defaultContent;
 
+    for (const line of lexicalAnalysis) {
+        const line_number = line.line;
+
+        for (const lexical_element of line.elements) {
+            const token_lexeme = `${lexical_element.token}: ${lexical_element.lexeme}`;
+
+            const table_row = `
+                <tr>
+                    <td>${line_number}</td>
+                    <td>${token_lexeme}</td>
+                </tr>
+            `;
+
+            table_elem.innerHTML += table_row;
+        }
+    }
+}
 const lexicalAnalyzer = async (text_JSON) => {
     try {
         const rawResponse = await fetch(URL, {
@@ -53,12 +79,21 @@ const lexicalAnalyzer = async (text_JSON) => {
             return max
         }, 0))
         console.log(lexicalAnalysis);
-        displayLexicalElements();
+        displayAllLexicalElements(); //display all elements
+        //displayLexicalElements();
         console.error("Fetch error:", err);
     } catch (err) {
     }
 };
-
+const switchView = () => {
+    if(view === 0){
+        displayLexicalElements();
+        view = 1;
+        return;
+    }
+    displayAllLexicalElements();
+    view = 0;
+}
 const handleSubmit = () => {
 
     // Provide format of JSON to be sent
