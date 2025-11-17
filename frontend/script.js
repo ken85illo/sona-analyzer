@@ -13,6 +13,7 @@ const displayLexicalElements = () => {
         return
     }
     lineSpinner.disabled = false;
+    let i = 0;
 
     table_elem.innerHTML = defaultContent
     const filteredLines = lexicalAnalysis.filter((current) => current.line == lineSpinner.value)
@@ -24,12 +25,13 @@ const displayLexicalElements = () => {
             const token_lexeme = `${lexical_element.token}: ${lexical_element.lexeme}`;
 
             const table_row = `
-                <tr>
+                <tr style="background:${i % 2 ? '#181826' : '#1c262b'};">
                     <td>${line_number}</td>
-                    <td>${token_lexeme}</td>
+                    <td>${lexical_element.token}</td>
+                    <td>${lexical_element.lexeme}
                 </tr>
             `;
-
+            i++;
             table_elem.innerHTML += table_row;
         }
     }
@@ -41,7 +43,7 @@ const displayAllLexicalElements = () => {
     lineSpinner.disabled = true;
         // Reset table to default header
     table_elem.innerHTML = defaultContent;
-
+    let i = 0;
     for (const line of lexicalAnalysis) {
         const line_number = line.line;
 
@@ -49,13 +51,15 @@ const displayAllLexicalElements = () => {
             const token_lexeme = `${lexical_element.token}: ${lexical_element.lexeme}`;
 
             const table_row = `
-                <tr>
+                <tr style="background:${i % 2 ? '#181826' : '#1c262b'};">
                     <td>${line_number}</td>
-                    <td>${token_lexeme}</td>
+                    <td>${lexical_element.token}</td>
+                    <td>${lexical_element.lexeme}
                 </tr>
             `;
-
+            i++;
             table_elem.innerHTML += table_row;
+            
         }
     }
 }
@@ -94,6 +98,7 @@ const switchView = () => {
     displayAllLexicalElements();
     view = 0;
 }
+
 const handleSubmit = () => {
 
     // Provide format of JSON to be sent
