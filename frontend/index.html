@@ -11,35 +11,30 @@
         />
         <link
             rel="stylesheet"
-            href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/ayu-mirage.min.css"
+            href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/seti.min.css"
         />
     </head>
-    <body>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
 
-        <div id="top-bar">SONA - State-Oriented Notational Automata</div>
-        <button onclick="handleSubmit()" class="bttn">ANALYZE CODE</button>
+    
+    <body>
+
+        <header class="main-header">
+             <img src="/assets/SONA_logo_1.png" alt="SONA Logo" class="sona-image">
+        </header>
+        
+        
         <div class="main-container">
-            <textarea
+            <button onclick="handleSubmit()" id="analyze-bttn" class="bttn">ANALYZE CODE</button>
+
+            <div class="text-editor-container">
+                <h2>Source Code</h2>
+                <textarea
                 id="textarea-element"
                 placeholder="enter program"
                 wrap="off"
-            ></textarea>
-            <script>
-                //used codemirror as the editor alias
-                const editor = CodeMirror.fromTextArea(
-                    document.getElementById('textarea-element'),
-                    {
-                        lineNumbers: true,
-                        mode: 'text/x-csrc',
-                        theme: 'ayu-mirage',
-                        tabSize: 4,
-                        indentUnit: 4,
-                        indentWithTabs: false,
-                    }
-                )
-            </script>
+                ></textarea>
+            </div>
+
             <div class="lexical-analysis-container">
                 <button onclick="switchView()" class="bttn">Switch View</button>
                 <input
@@ -51,21 +46,27 @@
                     step="1"
                     class="bttn"
                 />
-                <p>Analysis</p>
-                <table id="lexical-elements-table">
-                    <tr>
-                        <th>Line</th>
-                        <th>"Token"</th>
-                        <th>"Lexeme"</th>
-                    </tr>
-                </table>
+
+                <div class="lexical-analysis-table-container">
+                    <table id="lexical-elements-table">
+                        <tr>
+                            <th id="th-line-number">Line</th>
+                            <th>"Token"</th>
+                            <th>"Lexeme"</th>
+                        </tr>
+                    </table>
+                </div>
+                
             </div>
+
         </div>
-
+        
         <br />
         <br />
-
+        
         <div id="output"></div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
         <script src="script.js"></script>
     </body>
 </html>

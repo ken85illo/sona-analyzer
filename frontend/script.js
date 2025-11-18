@@ -25,11 +25,13 @@ const displayLexicalElements = () => {
         for (const lexical_element of line.elements) {
             const token_lexeme = `${lexical_element.token}: ${lexical_element.lexeme}`;
 
+            const color = i % 2 ? 'td-color-1' : 'td-color-2';
+
             const table_row = `
-                <tr style="background:${i % 2 ? '#181826' : '#1c262b'};">
-                    <td>${line_number}</td>
-                    <td>${lexical_element.token}</td>
-                    <td>${lexical_element.lexeme}
+                <tr>
+                    <td class = "${color}">${line_number}</td>
+                    <td class = "${color}">${lexical_element.token}</td>
+                    <td class = "${color}">${lexical_element.lexeme}</td>
                 </tr>
             `;
             i++;
@@ -51,11 +53,13 @@ const displayAllLexicalElements = () => {
         for (const lexical_element of line.elements) {
             const token_lexeme = `${lexical_element.token}: ${lexical_element.lexeme}`;
 
+            const color = i % 2 ? 'td-color-1' : 'td-color-2';
+
             const table_row = `
-                <tr style="background:${i % 2 ? '#181826' : '#1c262b'};">
-                    <td>${line_number}</td>
-                    <td>${lexical_element.token}</td>
-                    <td>${lexical_element.lexeme}
+                <tr>
+                    <td class = "${color}">${line_number}</td>
+                    <td class = "${color}">${lexical_element.token}</td>
+                    <td class = "${color}">${lexical_element.lexeme}</td>
                 </tr>
             `;
             i++;
@@ -90,6 +94,20 @@ const lexicalAnalyzer = async (text_JSON) => {
     } catch (err) {
     }
 };
+
+//used codemirror as the editor alias
+const editor = CodeMirror.fromTextArea(
+    document.getElementById('textarea-element'),
+    {
+        lineNumbers: true,
+        mode: 'text/x-csrc',
+        theme: "seti",
+        tabSize: 4,
+        indentUnit: 4,
+        indentWithTabs: false,
+    }
+)
+
 const switchView = () => {
     if(view === 0){
         displayLexicalElements();
