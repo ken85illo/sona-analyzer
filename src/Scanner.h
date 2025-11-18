@@ -48,6 +48,7 @@ private:
     void string();
     void number();
     void identifier();
+    bool unknownArithmetic();
 
     void addToken(TokenType type) {
         std::string text = TokenUtils::substring(m_start, m_current, m_source);
@@ -95,6 +96,10 @@ private:
     }
 
     TokenType lastToken() const {
+        if (m_tokens.empty()) {
+            return UNKNOWN;
+        }
+
         if (auto token = std::dynamic_pointer_cast<DefToken>(m_tokens.back())) {
             return token->type();
         }

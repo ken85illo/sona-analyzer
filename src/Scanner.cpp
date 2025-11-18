@@ -41,9 +41,7 @@ void Scanner::scanToken() {
     case '-':
         if (peek() == '-') {
             advance();
-            if(peek() == '-'){
-                while(match('-'));
-                addToken(UNKNOWN);
+            if (unknownArithmetic()) {
                 break;
             }
             addToken(TokenUtils::isIdentifier(lastToken()) ? POST_DECRMNT : PRE_DECRMNT);
@@ -53,15 +51,16 @@ void Scanner::scanToken() {
             addToken(SUBTRCT_ASS);
         }
         else {
+            if (unknownArithmetic()) {
+            }
             addToken(TokenUtils::isValue(lastToken()) ? SUBTRACT : NEGATIVE);
+            break;
         }
         break;
     case '+':
         if (peek() == '+') {
             advance();
-            if(peek() == '+'){
-                while(match('+'));
-                addToken(UNKNOWN);
+            if (unknownArithmetic()) {
                 break;
             }
             addToken(TokenUtils::isIdentifier(lastToken()) ? POST_INCRMNT : PRE_DECRMNT);
@@ -71,6 +70,9 @@ void Scanner::scanToken() {
             addToken(ADD_ASS);
         }
         else {
+            if (unknownArithmetic()) {
+                break;
+            }
             addToken(TokenUtils::isValue(lastToken()) ? ADD : POSITIVE);
         }
         break;
@@ -182,7 +184,7 @@ void Scanner::identifier() {
     }
 
     // When we declare a machine it must be added to user defined token set
-    if (!m_tokens.empty() && (lastToken() == MACHINE_TYPE || lastToken() == STRUCT_TYPE)) {
+    if (lastToken() == MACHINE_TYPE || lastToken() == STRUCT_TYPE) {
         addUserDefinedToken();
         return;
     }
@@ -197,4 +199,15 @@ void Scanner::identifier() {
 
     TokenType type = (specialWords.find(text) != specialWords.end()) ? specialWords.at(text) : IDENTIFIER;
     addToken(type);
+}
+
+bool Scanner::unknownArithmetic() {
+    if (TokenUtils::isArithmetic(peek())) {
+        while (TokenUtils::isArithmetic(peek())) {
+            advance();
+        }
+        addToken(UNKNOWN);
+        return true;
+    }
+    return false;
 }
