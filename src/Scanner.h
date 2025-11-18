@@ -1,6 +1,5 @@
 #pragma once
 
-#include "SpecialWords.h"
 #include "Token.h"
 #include "TokenType.h"
 #include "TokenUtils.h"
@@ -9,7 +8,7 @@ class Scanner {
 
     using TokenRef = std::shared_ptr<Token>;
     using TokenVec = std::vector<TokenRef>;
-    using TokenSet = std::set<std::string>;
+    using TokenSet = std::unordered_set<std::string>;
 
 public:
     Scanner(const std::string &source)
@@ -52,17 +51,16 @@ private:
 
     void addToken(TokenType type) {
         std::string text = TokenUtils::substring(m_start, m_current, m_source);
-        m_tokens.emplace_back(new Token(type, text, m_line));
+        m_tokens.push_back(std::make_shared<DefToken>(type, text, m_line));
     }
 
     void addUserDefinedToken() {
         using namespace std::literals::string_literals;
 
         std::string text = TokenUtils::substring(m_start, m_current, m_source);
-        std::string type = TokenUtils::getTypeName(text);
+        m_userDefinedTokens.insert(text);
 
-        m_userDefinedTokens.insert(type);
-        m_tokens.emplace_back(new Token(type, text, m_line));
+        m_tokens.push_back(std::make_shared<UserToken>(text, m_line));
     }
 
     bool isAtEnd() const {
@@ -97,8 +95,8 @@ private:
     }
 
     TokenType lastToken() const {
-        if (m_tokens.back()->type().has_value()) {
-            return *m_tokens.back()->type();
+        if (auto token = std::dynamic_pointer_cast<DefToken>(m_tokens.back())) {
+            return token->type();
         }
         return UNKNOWN;
     }

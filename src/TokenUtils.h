@@ -31,6 +31,10 @@ inline std::string substring(uint32_t start, uint32_t end, const std::string &te
 inline std::string getTypeName(std::string type) {
     using namespace std::literals::string_literals;
 
+    std::transform(type.begin(), type.end(), type.begin(), [](auto c) {
+        return std::toupper(c);
+    });
+
     type += "_TYPE"s;
 
     return type;

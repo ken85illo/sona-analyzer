@@ -1,4 +1,5 @@
 #include "Scanner.h"
+#include "SpecialWords.h"
 
 void Scanner::scanToken() {
     char c = advance();
@@ -111,10 +112,6 @@ void Scanner::scanToken() {
         else {
             addToken(match('=') ? DIVIDE_ASS : DIVIDE);
         }
-        /*if (peek() == '/'){
-            add comment logic here
-            break;
-            }*/
 
     case ' ':
     case '\t':
@@ -183,7 +180,7 @@ void Scanner::identifier() {
     std::string text = TokenUtils::substring(m_start, m_current, m_source);
 
     // Check if a type is user defined
-    if (m_userDefinedTokens.find(TokenUtils::getTypeName(text)) != m_userDefinedTokens.end()) {
+    if (m_userDefinedTokens.find(text) != m_userDefinedTokens.end()) {
         addUserDefinedToken();
         return;
     }

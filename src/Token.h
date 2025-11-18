@@ -1,40 +1,58 @@
 #pragma once
 
 #include "TokenType.h"
+#include "TokenUtils.h"
 
 class Token {
 public:
-    Token(TokenType type, const std::string &lexeme, uint32_t line)
-    : m_type(type), m_userDefinedType(std::nullopt), m_lexeme(lexeme), m_line(line) {}
+    Token(const std::string &lexeme, uint32_t line)
+    : m_lexeme(lexeme), m_line(line) {}
 
-    Token(const std::string &type, const std::string &lexeme, uint32_t line)
-    : m_type(std::nullopt), m_userDefinedType(type), m_lexeme(lexeme), m_line(line) {}
-
-    std::string toString() const {
+    std::string toString() {
         std::stringstream stream;
 
-        std::stringstream enumStr;
-        enumStr << ((m_type) ? magic_enum::enum_name(*m_type) : *m_userDefinedType);
-
-        stream << "#" << enumStr.str().length() << " " << enumStr.str() << ",#" << m_lexeme.length() << " " << m_lexeme;
+        stream << "#" << getTokenStr().length() << " " << getTokenStr() << ",#" << m_lexeme.length() << " " << m_lexeme;
         return stream.str();
-    }
-
-    const std::optional<TokenType> &type() const {
-        return m_type;
-    }
-
-    const std::optional<std::string> &userDefinedType() const {
-        return m_userDefinedType;
     }
 
     uint32_t line() const {
         return m_line;
     }
 
-private:
-    const std::optional<TokenType> m_type;
-    const std::optional<std::string> m_userDefinedType;
+protected:
     const std::string m_lexeme;
     const uint32_t m_line;
+
+private:
+    virtual std::string getTokenStr() = 0;
+};
+
+class DefToken : public Token {
+public:
+    DefToken(TokenType type, const std::string &lexeme, uint32_t line)
+    : Token(lexeme, line), m_type(type) {}
+
+    TokenType type() const {
+        return m_type;
+    }
+
+private:
+    std::string getTokenStr() override {
+        std::stringstream stream;
+        stream << magic_enum::enum_name(m_type);
+        return stream.str();
+    }
+
+    const TokenType m_type;
+};
+
+class UserToken : public Token {
+public:
+    UserToken(const std::string &lexeme, uint32_t line)
+    : Token(lexeme, line) {}
+
+private:
+    std::string getTokenStr() override {
+        return TokenUtils::getTypeName(m_lexeme);
+    }
 };
