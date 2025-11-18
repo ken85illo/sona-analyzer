@@ -4,6 +4,7 @@ const lineSpinner = document.getElementById("line-number")
 const defaultContent = table_elem.innerHTML
 let lexicalAnalysis = null
 let view = 0;
+let highlightedLine = null;
 
 const PORT = 8081;
 const URL = `http://localhost:${PORT}/api/lexical-analyzer`;
@@ -92,9 +93,11 @@ const lexicalAnalyzer = async (text_JSON) => {
 const switchView = () => {
     if(view === 0){
         displayLexicalElements();
+        highlightEditorLine(lineSpinner.value);
         view = 1;
         return;
     }
+    editor.removeLineClass(highlightedLine, "background", "codemirror_highlight");
     displayAllLexicalElements();
     view = 0;
 }
@@ -129,8 +132,20 @@ textarea_elem.addEventListener('keydown', (e) => {
 })
 
 lineSpinner.addEventListener('change', (e) => {
-    displayLexicalElements()
+    displayLexicalElements();
+    highlightEditorLine(lineSpinner.value);
 })
 
+function highlightEditorLine(lineNumber) {
+    const lineIndex = Number(lineNumber) - 1;
 
+    if (highlightedLine !== null) {
+        editor.removeLineClass(highlightedLine, "background", "codemirror_highlight");
+    }
+
+    editor.addLineClass(lineIndex, "background", "codemirror_highlight");
+
+    highlightedLine = lineIndex;
+    editor.scrollIntoView({ line: lineIndex, ch: 0 }, 100);
+}
 

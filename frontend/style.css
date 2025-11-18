@@ -85,3 +85,6 @@ input:disabled{
     background-color:#181826;
     color:#181826;
 }
+.codemirror_highlight{
+    background-color:aquamarine;
+}
