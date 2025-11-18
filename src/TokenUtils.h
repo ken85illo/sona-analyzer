@@ -17,11 +17,16 @@ inline bool isAlphaNumeric(char c) {
 }
 
 inline bool isValue(TokenType type) {
-    return type == IDENTIFIER || type == INT_LITERAL || type == FLT_LITERAL;
+    return type == IDENTIFIER || type == INT_LITERAL || type == FLT_LITERAL || type == POST_INCRMNT ||
+           type == POST_DECRMNT;
 }
 
 inline bool isIdentifier(TokenType type) {
     return type == IDENTIFIER;
+}
+
+inline bool isArithmetic(char c) {
+    return c == '+' || c == '-' || c == '*' || c == '/';
 }
 
 inline std::string substring(uint32_t start, uint32_t end, const std::string &text) {
