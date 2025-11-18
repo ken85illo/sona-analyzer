@@ -41,6 +41,11 @@ void Scanner::scanToken() {
     case '-':
         if (peek() == '-') {
             advance();
+            if(peek() == '-'){
+                while(match('-'));
+                addToken(UNKNOWN);
+                break;
+            }
             addToken(TokenUtils::isIdentifier(lastToken()) ? POST_DECRMNT : PRE_DECRMNT);
         }
         else if (peek() == '=') {
@@ -54,6 +59,11 @@ void Scanner::scanToken() {
     case '+':
         if (peek() == '+') {
             advance();
+            if(peek() == '+'){
+                while(match('+'));
+                addToken(UNKNOWN);
+                break;
+            }
             addToken(TokenUtils::isIdentifier(lastToken()) ? POST_INCRMNT : PRE_DECRMNT);
         }
         else if (peek() == '=') {
