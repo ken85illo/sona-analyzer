@@ -166,4 +166,91 @@ function highlightEditorLine(lineNumber) {
     highlightedLine = lineIndex;
     editor.scrollIntoView({ line: lineIndex, ch: 0 }, 100);
 }
+function insertSample(){
+    editor.setValue(` //sample code        
+int sum(int a, int b);
+Machine SumMachine = {
+    @context = {string input}
+    @states = {"Idle", "Compute"};
+    @start = "Idle";
 
+    @transitions = {
+        ("Idle", input == "compute") = "Compute";
+        ("Compute", input == "done") = "Idle";
+    }
+
+    @state Idle = {
+        print("Type 'compute' to calculate sum.");
+    }
+
+    @state Compute = {
+        print("Enter first number:");
+        int a = parseInt(readLine());
+        print("Enter second number:");
+        int b = parseInt(readLine());
+
+        int result = sum(a, b);
+        print(result);
+
+        input = "done"
+    }
+}
+
+SumMachine basicAdder;
+
+int sum(int a, int b) {
+    return a + b;
+}
+
+int main() {
+    for(int i = 0 ; i < 5 ; i++) {
+        string userInput = readLine();
+
+        if(userInput == "exit") {
+            break;
+        } else {
+            basicAdder.input = userInput;
+        }
+    }
+
+    return 0;
+}
+Machine CoffeeMachine = {
+    @context = {string button}
+    @states = {"Idle", "Brewing", "Done"};
+    @start = "Idle";
+
+    @transitions = {
+        ("Idle", button == "brew") = "Brewing";
+        ("Brewing", button == "finish") = "Done";
+        ("Done", button == "reset") = "Idle";
+    }
+
+    @state Idle = {
+        print("Waiting for user...");
+    }
+
+    @state Brewing = {
+        print("Brewing coffee...");
+    }
+
+    @state Done = {
+        print("Coffee ready!");
+    }
+}
+
+CoffeeMachine starbucks;
+
+int main() {
+    string input = "";
+    bool active = true;
+
+    while(active) {
+        input = readLine();
+        starbucks.button = input;
+    }
+
+    return 0;
+}
+`);
+}
