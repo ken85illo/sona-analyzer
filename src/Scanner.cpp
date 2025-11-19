@@ -52,6 +52,7 @@ void Scanner::scanToken() {
         }
         else {
             if (unknownArithmetic()) {
+                break;
             }
             addToken(TokenUtils::isValue(lastToken()) ? SUBTRACT : NEGATIVE);
             break;
