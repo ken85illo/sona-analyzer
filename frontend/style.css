@@ -228,3 +228,46 @@ header {
     height:100%;
     margin: 5px;
 }
+#sample-bttn{
+    background-color: #800011;
+    border-color:#800011;
+    box-shadow: 0 0 10px #800011, 0 0 30px rgba(123, 22, 22, 0.3);
+}
+#sample-bttn:hover {
+    cursor: pointer;
+    box-shadow: 0 0 20px #800011, 0 0 60px #7a1515;
+    transform: scale(1.05); 
+}
+#up-down{
+    display:flex;
+    flex-direction: column;
+}
+.spinner-btn{
+    background-color: #800011;
+    color:white;
+    height: 100%;
+    width:20px;
+    border-radius: 7px;
+    box-shadow: 0 0 10px #800011, 0 0 30px rgba(123, 22, 22, 0.3);
+    border: solid 1px;
+    border-color:#800011;
+}
+.spinner-btn:hover{
+    cursor: pointer;
+    box-shadow: 0 0 20px #800011, 0 0 60px #7a1515;
+    transform: scale(1.04);
+    color:#9f4242;
+}
+#button-div{
+    display:flex;
+    gap:2px;
+}
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+input[type=number] {
+    -moz-appearance: textfield;
+} 
