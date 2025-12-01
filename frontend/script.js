@@ -245,6 +245,9 @@ int main() {
 }
 
 function spinnerIncrement() {
+    if (Number(lineSpinner.value) >= lineSpinner.max)
+        return;
+
     lineSpinner.value = Number(lineSpinner.value) + 1;
 
     displayLexicalElements();
