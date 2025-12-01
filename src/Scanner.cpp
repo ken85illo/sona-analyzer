@@ -6,37 +6,37 @@ void Scanner::scanToken() {
 
     switch (c) {
     case '(':
-        addToken(LEFT_PAREN);
+        addToken(LEFT_PAREN_DELIM);
         break;
     case ')':
-        addToken(RIGHT_PAREN);
+        addToken(RIGHT_PAREN_DELIM);
         break;
     case '{':
-        addToken(LEFT_CURLY);
+        addToken(LEFT_CURLY_DELIM);
         break;
     case '}':
-        addToken(RIGHT_CURLY);
+        addToken(RIGHT_CURLY_DELIM);
         break;
     case '[':
-        addToken(LEFT_SQUARE);
+        addToken(LEFT_SQUARE_DELIM);
         break;
     case ']':
-        addToken(RIGHT_SQUARE);
+        addToken(RIGHT_SQUARE_DELIM);
         break;
     case ',':
-        addToken(COMMA);
+        addToken(COMMA_OP);
         break;
     case '.':
-        addToken(DOT);
+        addToken(DOT_OP);
         break;
     case ';':
-        addToken(SEMICOLON);
+        addToken(SEMICOLON_DELIM);
         break;
     case '*':
-        addToken(match('=') ? MULTPLY_ASS : MULTIPLY);
+        addToken(match('=') ? MULTPLY_ASS_OP : MULTIPLY_OP);
         break;
     case '%':
-        addToken(match('=') ? MODULO_ASS : MODULO);
+        addToken(match('=') ? MODULO_ASS_OP : MODULO_OP);
         break;
     case '-':
         if (peek() == '-') {
@@ -44,17 +44,17 @@ void Scanner::scanToken() {
             if (unknownArithmetic()) {
                 break;
             }
-            addToken(TokenUtils::isIdentifier(lastToken()) ? POST_DECRMNT : PRE_DECRMNT);
+            addToken(TokenUtils::isIdentifier(lastToken()) ? POST_DECRMNT_OP : PRE_DECRMNT_OP);
         }
         else if (peek() == '=') {
             advance();
-            addToken(SUBTRCT_ASS);
+            addToken(SUBTRCT_ASS_OP);
         }
         else {
             if (unknownArithmetic()) {
                 break;
             }
-            addToken(TokenUtils::isValue(lastToken()) ? SUBTRACT : NEGATIVE);
+            addToken(TokenUtils::isValue(lastToken()) ? SUBTRACT_OP : NEGATIVE_OP);
             break;
         }
         break;
@@ -64,40 +64,40 @@ void Scanner::scanToken() {
             if (unknownArithmetic()) {
                 break;
             }
-            addToken(TokenUtils::isIdentifier(lastToken()) ? POST_INCRMNT : PRE_DECRMNT);
+            addToken(TokenUtils::isIdentifier(lastToken()) ? POST_INCRMNT_OP : PRE_DECRMNT_OP);
         }
         else if (peek() == '=') {
             advance();
-            addToken(ADD_ASS);
+            addToken(ADD_ASS_OP);
         }
         else {
             if (unknownArithmetic()) {
                 break;
             }
-            addToken(TokenUtils::isValue(lastToken()) ? ADD : POSITIVE);
+            addToken(TokenUtils::isValue(lastToken()) ? ADD_OP : POSITIVE_OP);
         }
         break;
     case '&':
         if (match('&')) {
-            addToken(AND);
+            addToken(AND_LOG_OP);
         }
         break;
     case '|':
         if (match('|')) {
-            addToken(OR);
+            addToken(OR_LOG_OP);
         }
         break;
     case '!':
-        addToken(match('=') ? NOT_EQUAL : NOT);
+        addToken(match('=') ? NOT_EQUAL_REL_OP : NOT_LOG_OP);
         break;
     case '=':
-        addToken(match('=') ? EQUAL_REL : EQUAL_ASS);
+        addToken(match('=') ? EQUAL_REL_OP : EQUAL_ASS_OP);
         break;
     case '<':
-        addToken(match('=') ? LESS_EQUAL : LESS);
+        addToken(match('=') ? LESS_EQUAL_REL_OP : LESS_REL_OP);
         break;
     case '>':
-        addToken(match('=') ? GREATER_EQUAL : GREATER);
+        addToken(match('=') ? GREATER_EQUAL_REL_OP : GREATER_REL_OP);
         break;
     case '/':
         if (peek() == '/') {
@@ -123,7 +123,7 @@ void Scanner::scanToken() {
             addToken(MULTILINE_COMNT);
         }
         else {
-            addToken(match('=') ? DIVIDE_ASS : DIVIDE);
+            addToken(match('=') ? DIVIDE_ASS_OP : DIVIDE_OP);
         }
 
     case ' ':
@@ -185,7 +185,7 @@ void Scanner::identifier() {
     }
 
     // When we declare a machine it must be added to user defined token set
-    if (lastToken() == MACHINE_TYPE || lastToken() == STRUCT_TYPE) {
+    if (lastToken() == MACHINE_TYPE_RESW || lastToken() == STRUCT_TYPE_RESW) {
         addUserDefinedToken();
         return;
     }

@@ -17,8 +17,8 @@ inline bool isAlphaNumeric(char c) {
 }
 
 inline bool isValue(TokenType type) {
-    return type == IDENTIFIER || type == INT_LITERAL || type == FLT_LITERAL || type == POST_INCRMNT ||
-           type == POST_DECRMNT;
+    return type == IDENTIFIER || type == INT_LITERAL || type == FLT_LITERAL || type == POST_INCRMNT_OP ||
+           type == POST_DECRMNT_OP;
 }
 
 inline bool isIdentifier(TokenType type) {
@@ -40,7 +40,7 @@ inline std::string getTypeName(std::string type) {
         return std::toupper(c);
     });
 
-    type += "_TYPE"s;
+    type += "_TYPE_RESW"s;
 
     return type;
 }
