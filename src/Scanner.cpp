@@ -64,7 +64,7 @@ void Scanner::scanToken() {
             if (unknownArithmetic()) {
                 break;
             }
-            addToken(TokenUtils::isIdentifier(lastToken()) ? POST_INCRMNT_OP : PRE_DECRMNT_OP);
+            addToken(TokenUtils::isIdentifier(lastToken()) ? POST_INCRMNT_OP : PRE_INCRMNT_OP);
         }
         else if (peek() == '=') {
             advance();
