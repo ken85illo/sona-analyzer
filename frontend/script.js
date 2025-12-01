@@ -14,45 +14,31 @@ const displayLexicalElements = () => {
         return
     }
     lineSpinner.disabled = false;
-    let i = 0;
 
     table_elem.innerHTML = defaultContent
     const filteredLines = lexicalAnalysis.filter((current) => current.line == lineSpinner.value)
 
-    for (const line of filteredLines) {
-        const line_number = line.line;
-
-        for (const lexical_element of line.elements) {
-            const token_lexeme = `${lexical_element.token}: ${lexical_element.lexeme}`;
-
-            const color = i % 2 ? 'td-color-1' : 'td-color-2';
-
-            const table_row = `
-                <tr>
-                    <td class = "${color}">${line_number}</td>
-                    <td class = "${color}">${lexical_element.token}</td>
-                    <td class = "${color}">${lexical_element.lexeme}</td>
-                </tr>
-            `;
-            i++;
-            table_elem.innerHTML += table_row;
-        }
-    }
+    iterateLexicalAnalysis(filteredLines)
 }
+
 const displayAllLexicalElements = () => {
     if (lexicalAnalysis === null) {
         return
     }
     lineSpinner.disabled = true;
-        // Reset table to default header
+    // Reset table to default header
     table_elem.innerHTML = defaultContent;
+
+    iterateLexicalAnalysis(lexicalAnalysis)
+}
+
+const iterateLexicalAnalysis = (analysis) => {
     let i = 0;
-    for (const line of lexicalAnalysis) {
+
+    for (const line of analysis) {
         const line_number = line.line;
 
         for (const lexical_element of line.elements) {
-            const token_lexeme = `${lexical_element.token}: ${lexical_element.lexeme}`;
-
             const color = i % 2 ? 'td-color-1' : 'td-color-2';
 
             const table_row = `
@@ -64,10 +50,12 @@ const displayAllLexicalElements = () => {
             `;
             i++;
             table_elem.innerHTML += table_row;
-            
+
         }
     }
 }
+
+
 const lexicalAnalyzer = async (text_JSON) => {
     try {
         const rawResponse = await fetch(URL, {
@@ -109,7 +97,7 @@ const editor = CodeMirror.fromTextArea(
 )
 
 const switchView = () => {
-    if(view === 0){
+    if (view === 0) {
         displayLexicalElements();
         highlightEditorLine(lineSpinner.value);
         view = 1;
@@ -166,7 +154,8 @@ function highlightEditorLine(lineNumber) {
     highlightedLine = lineIndex;
     editor.scrollIntoView({ line: lineIndex, ch: 0 }, 100);
 }
-function insertSample(){
+
+function insertSample() {
     editor.setValue(` //sample code        
 int sum(int a, int b);
 Machine SumMachine = {
@@ -254,14 +243,16 @@ int main() {
 }
 `);
 }
-function spinnerIncrement(){
+
+function spinnerIncrement() {
     lineSpinner.value = Number(lineSpinner.value) + 1;
 
     displayLexicalElements();
     highlightEditorLine(lineSpinner.value);
 }
-function spinnerDecrement(){
-    if(lineSpinner.value <=1 )
+
+function spinnerDecrement() {
+    if (lineSpinner.value <= 1)
         return;
     lineSpinner.value = Number(lineSpinner.value) - 1;
 
