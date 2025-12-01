@@ -33,6 +33,7 @@ const displayAllLexicalElements = () => {
 }
 
 const iterateLexicalAnalysis = (analysis) => {
+    let html = "";
     let i = 0;
 
     for (const line of analysis) {
@@ -41,7 +42,7 @@ const iterateLexicalAnalysis = (analysis) => {
         for (const lexical_element of line.elements) {
             const color = i % 2 ? 'td-color-1' : 'td-color-2';
 
-            const table_row = `
+            html += `
                 <tr>
                     <td class = "${color}">${line_number}</td>
                     <td class = "${color}">${lexical_element.token}</td>
@@ -49,10 +50,10 @@ const iterateLexicalAnalysis = (analysis) => {
                 </tr>
             `;
             i++;
-            table_elem.innerHTML += table_row;
 
         }
     }
+    table_elem.innerHTML = html;
 }
 
 
