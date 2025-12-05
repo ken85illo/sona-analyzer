@@ -194,6 +194,9 @@ private:
 
     void multiLineComment() {
         while (!(peek() == '*' && peekNext() == '/') && !isAtEnd()) {
+            if(peek() == '\n') {
+                ++m_line;
+            }
             advance();
         }
         // consume the last "*/"
