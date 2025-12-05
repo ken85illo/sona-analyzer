@@ -137,7 +137,7 @@ private:
             type = TokenUtils::isIdentifier(lastToken()) ? POST_INCRMNT_OP : PRE_INCRMNT_OP;
         }
         else {
-            type = TokenUtils::isValue(lastToken()) ? ADD_OP : POSITIVE_OP;
+            type = (TokenUtils::isValue(lastToken()) || lastToken() == STR_LITERAL) ? ADD_OP : POSITIVE_OP;
         }
 
         if (!unknownArithmetic()) {
