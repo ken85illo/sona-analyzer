@@ -157,92 +157,86 @@ function highlightEditorLine(lineNumber) {
 }
 
 function insertSample() {
-    editor.setValue(` //sample code        
-int sum(int a, int b);
-Machine SumMachine = {
-    @context = {string input}
-    @states = {"Idle", "Compute"};
-    @start = "Idle";
+    editor.setValue(`void maintainTemperature(int currentTemperature) {
+    // Add example maintaning mechanism
+}
+
+void increaseTemperature(int currentTemperature) {
+    // Add example heating mechanism
+}
+
+void decreaseTemperature(int currentTemperature) {
+    // Add example cooling mechanism
+}
+
+Machine Thermometer = {
+    @context = {int temperature};
+
+    @states = {"Freezing", "Cold", "Normal", "Hot", "Boiling"};
+    @start = "Normal";
+    @final = {"Freezing", "Boiling"};
 
     @transitions = {
-        ("Idle", input == "compute") = "Compute";
-        ("Compute", input == "done") = "Idle";
+        ("Normal", temperature <= 15) = "Cold";
+        ("Normal", temperature >= 36) = "Hot";
+
+        ("Cold", temperature > 15 && temperature < 36) = "Normal";
+        ("Cold", temperature <= 0) = "Freezing";
+
+        ("Freezing", temperature > 0) = "Cold";
+
+        ("Hot", temperature > 15 && temperature < 36) = "Normal";
+        ("Hot", temperature >= 100) = "Boiling";
+
+        ("Boiling", temperature < 100) = "Hot";
     }
 
-    @state Idle = {
-        print("Type 'compute' to calculate sum.");
+    @state Normal = {
+        maintainTemperature(temperature);
+        print("Temperature: " + temperature + "°C — Normal range.");
     }
 
-    @state Compute = {
-        print("Enter first number:");
-        int a = parseInt(readLine());
-        print("Enter second number:");
-        int b = parseInt(readLine());
+    @state Cold = {
+        decreaseTemperature(temperature);
+        print("Temperature: " + temperature + "°C — It's cold.");
+    }
 
-        int result = sum(a, b);
-        print(result);
+    @state Freezing = {
+        decreaseTemperature(temperature);
+        print("Warning: Freezing temperature!");
+        print("Temperature: " + temperature + "°C");
+    }
 
-        input = "done"
+    @state Hot = {
+        increaseTemperature(temperature);
+        print("Temperature: " + temperature + "°C — It's hot!");
+    }
+
+    @state Boiling = {
+        increaseTemperature(temperature);
+        print("Danger: Boiling temperature!");
+        print("Temperature: " + temperature + "°C");
+    }
+
+    @finalState = {
+        print("Final temperature state reached.");
     }
 }
 
-SumMachine basicAdder;
-
-int sum(int a, int b) {
-    return a + b;
-}
+Thermometer thermometer;
 
 int main() {
-    for(int i = 0 ; i < 5 ; i++) {
-        string userInput = readLine();
+    bool isPowerOn = true;
+    int temperatureInput = 0;
 
-        if(userInput == "exit") {
-            break;
-        } else {
-            basicAdder.input = userInput;
-        }
-    }
+    while(isPowerOn) {
+        print("Enter desired temperature: ");
+        temperatureInput = parseInt(readLine());
 
-    return 0;
-}
-Machine CoffeeMachine = {
-    @context = {string button}
-    @states = {"Idle", "Brewing", "Done"};
-    @start = "Idle";
-
-    @transitions = {
-        ("Idle", button == "brew") = "Brewing";
-        ("Brewing", button == "finish") = "Done";
-        ("Done", button == "reset") = "Idle";
-    }
-
-    @state Idle = {
-        print("Waiting for user...");
-    }
-
-    @state Brewing = {
-        print("Brewing coffee...");
-    }
-
-    @state Done = {
-        print("Coffee ready!");
+        thermometer.temperature = temperatureInput;
     }
 }
-
-CoffeeMachine starbucks;
-
-int main() {
-    string input = "";
-    bool active = true;
-
-    while(active) {
-        input = readLine();
-        starbucks.button = input;
-    }
-
-    return 0;
-}
-`);
+    `);
 }
 
 function spinnerIncrement() {
