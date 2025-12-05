@@ -39,53 +39,16 @@ void Scanner::scanToken() {
         addToken(match('=') ? MODULO_ASS_OP : MODULO_OP);
         break;
     case '-':
-        if (peek() == '-') {
-            advance();
-            if (unknownArithmetic()) {
-                break;
-            }
-            addToken(TokenUtils::isIdentifier(lastToken()) ? POST_DECRMNT_OP : PRE_DECRMNT_OP);
-        }
-        else if (peek() == '=') {
-            advance();
-            addToken(SUBTRCT_ASS_OP);
-        }
-        else {
-            if (unknownArithmetic()) {
-                break;
-            }
-            addToken(TokenUtils::isValue(lastToken()) ? SUBTRACT_OP : NEGATIVE_OP);
-            break;
-        }
+        handleMinus();
         break;
     case '+':
-        if (peek() == '+') {
-            advance();
-            if (unknownArithmetic()) {
-                break;
-            }
-            addToken(TokenUtils::isIdentifier(lastToken()) ? POST_INCRMNT_OP : PRE_INCRMNT_OP);
-        }
-        else if (peek() == '=') {
-            advance();
-            addToken(ADD_ASS_OP);
-        }
-        else {
-            if (unknownArithmetic()) {
-                break;
-            }
-            addToken(TokenUtils::isValue(lastToken()) ? ADD_OP : POSITIVE_OP);
-        }
+        handlePlus();
         break;
     case '&':
-        if (match('&')) {
-            addToken(AND_LOG_OP);
-        }
+        handleDouble('&', AND_LOG_OP);
         break;
     case '|':
-        if (match('|')) {
-            addToken(OR_LOG_OP);
-        }
+        handleDouble('|', OR_LOG_OP);
         break;
     case '!':
         addToken(match('=') ? NOT_EQUAL_REL_OP : NOT_LOG_OP);
@@ -100,32 +63,7 @@ void Scanner::scanToken() {
         addToken(match('=') ? GREATER_EQUAL_REL_OP : GREATER_REL_OP);
         break;
     case '/':
-        if (peek() == '/') {
-            // Add line comment token
-            for (char p = peek(); p != '\n' && p != '\0'; p = peek()) {
-                advance();
-            }
-            addToken(LINE_COMNT);
-        }
-        else if (peek() == '*') {
-            // Add multiline comment token
-
-            // skip the first *
-            advance();
-            for (char p = peek(), pn = peekNext(); p != '*' && pn != '/'; p = peek(), pn = peekNext()) {
-                advance();
-            }
-
-            // skip the remaining *  and /
-            advance();
-            advance();
-
-            addToken(MULTILINE_COMNT);
-        }
-        else {
-            addToken(match('=') ? DIVIDE_ASS_OP : DIVIDE_OP);
-        }
-
+        handleSlash();
     case ' ':
     case '\t':
         break;
@@ -200,15 +138,4 @@ void Scanner::identifier() {
 
     TokenType type = (specialWords.find(text) != specialWords.end()) ? specialWords.at(text) : IDENTIFIER;
     addToken(type);
-}
-
-bool Scanner::unknownArithmetic() {
-    if (TokenUtils::isArithmetic(peek())) {
-        while (TokenUtils::isArithmetic(peek())) {
-            advance();
-        }
-        addToken(UNKNOWN);
-        return true;
-    }
-    return false;
 }

@@ -48,7 +48,6 @@ private:
     void string();
     void number();
     void identifier();
-    bool unknownArithmetic();
 
     void addToken(TokenType type) {
         std::string text = TokenUtils::substring(m_start, m_current, m_source);
@@ -104,5 +103,104 @@ private:
             return token->type();
         }
         return UNKNOWN;
+    }
+
+    bool unknownArithmetic() {
+        if (TokenUtils::isArithmetic(peek())) {
+            while (TokenUtils::isArithmetic(peek())) {
+                advance();
+            }
+            addToken(UNKNOWN);
+            return true;
+        }
+        return false;
+    }
+
+    void handleDouble(char expected, TokenType type) {
+        if (match(expected)) {
+            addToken(type);
+        }
+        else {
+            addToken(UNKNOWN);
+        }
+    }
+
+    void handlePlus() {
+        if (match('=')) {
+            addToken(ADD_ASS_OP);
+            return;
+        }
+
+        TokenType type;
+
+        if (match('+')) {
+            type = TokenUtils::isIdentifier(lastToken()) ? POST_INCRMNT_OP : PRE_INCRMNT_OP;
+        }
+        else {
+            type = TokenUtils::isValue(lastToken()) ? ADD_OP : POSITIVE_OP;
+        }
+
+        if (!unknownArithmetic()) {
+            addToken(type);
+        }
+    }
+
+    void handleMinus() {
+        if (match('=')) {
+            addToken(SUBTRCT_ASS_OP);
+            return;
+        }
+
+        TokenType type;
+
+        if (match('-')) {
+            type = TokenUtils::isIdentifier(lastToken()) ? POST_DECRMNT_OP : PRE_DECRMNT_OP;
+        }
+        else {
+            type = TokenUtils::isValue(lastToken()) ? SUBTRACT_OP : NEGATIVE_OP;
+        }
+
+        if (!unknownArithmetic()) {
+            addToken(type);
+        }
+    }
+
+    void handleWhitespace(char c) {
+        if (c == '\n') {
+            ++m_line;
+        }
+    }
+
+    void handleSlash() {
+        if (peek() == '/') {
+            // Add line comment token
+            singleLineComment();
+        }
+        else if (peek() == '*') {
+            // Add multiline comment token
+            multiLineComment();
+        }
+        else {
+            addToken(match('=') ? DIVIDE_ASS_OP : DIVIDE_OP);
+        }
+    }
+
+    void singleLineComment() {
+        for (char p = peek(); p != '\n' && p != '\0'; p = peek()) {
+            advance();
+        }
+        addToken(LINE_COMNT);
+    }
+
+    void multiLineComment() {
+        while (!(peek() == '*' && peekNext() == '/') && !isAtEnd()) {
+            advance();
+        }
+        // consume the last "*/"
+        if (!isAtEnd()) {
+            advance();
+            advance();
+        }
+        addToken(MULTILINE_COMNT);
     }
 };
