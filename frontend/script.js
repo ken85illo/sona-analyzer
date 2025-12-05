@@ -15,7 +15,6 @@ const displayLexicalElements = () => {
     }
     lineSpinner.disabled = false;
 
-    table_elem.innerHTML = defaultContent
     const filteredLines = lexicalAnalysis.filter((current) => current.line == lineSpinner.value)
 
     iterateLexicalAnalysis(filteredLines)
@@ -26,8 +25,6 @@ const displayAllLexicalElements = () => {
         return
     }
     lineSpinner.disabled = true;
-    // Reset table to default header
-    table_elem.innerHTML = defaultContent;
 
     iterateLexicalAnalysis(lexicalAnalysis)
 }
@@ -35,6 +32,9 @@ const displayAllLexicalElements = () => {
 const iterateLexicalAnalysis = (analysis) => {
     let html = "";
     let i = 0;
+
+    // Reset table to default header
+    html += defaultContent;
 
     for (const line of analysis) {
         const line_number = line.line;
