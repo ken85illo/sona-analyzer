@@ -36,6 +36,10 @@ public:
         return m_type;
     }
 
+    void setType(TokenType type) {
+        m_type = type;
+    }
+
 private:
     std::string getTokenStr() override {
         std::stringstream stream;
@@ -43,7 +47,7 @@ private:
         return stream.str();
     }
 
-    const TokenType m_type;
+    TokenType m_type;
 };
 
 class UserToken : public Token {

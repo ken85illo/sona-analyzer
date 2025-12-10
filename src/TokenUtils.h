@@ -18,7 +18,7 @@ inline bool isAlphaNumeric(char c) {
 
 inline bool isValue(TokenType type) {
     return type == IDENTIFIER || type == INT_LITERAL || type == FLT_LITERAL || type == POST_INCRMNT_OP ||
-           type == POST_DECRMNT_OP;
+           type == POST_DECRMNT_OP || type == PRE_DECRMNT_OP || type == POST_DECRMNT_OP || type == STR_LITERAL;
 }
 
 inline bool isUserType(TokenType type) {
@@ -36,6 +36,18 @@ inline bool isIdentifier(TokenType type) {
 
 inline bool isArithmetic(char c) {
     return c == '+' || c == '-' || c == '*' || c == '/';
+}
+
+inline bool isSingleUnaryOp(TokenType type) {
+    return type == NEGATIVE_OP || type == POSITIVE_OP;
+}
+
+inline bool isDoubleUnaryOp(TokenType type) {
+    return type == PRE_DECRMNT_OP || type == PRE_INCRMNT_OP || type == POST_DECRMNT_OP || type == POST_INCRMNT_OP;
+}
+
+inline bool isBinaryOp(TokenType type) {
+    return type == SUBTRACT_OP || type == ADD_OP || type == DIVIDE_OP || type == MULTIPLY_OP || type == MODULO_OP;
 }
 
 inline std::string substring(uint32_t start, uint32_t end, const std::string &text) {

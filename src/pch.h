@@ -7,8 +7,10 @@
 #include <memory>
 
 // Data Structures
+#include <functional>
 #include <set>
 #include <sstream>
+#include <stack>
 #include <string.h>
 #include <string>
 #include <unordered_map>

@@ -33,7 +33,7 @@ void Scanner::scanToken() {
         addToken(SEMICOLON_DELIM);
         break;
     case '*':
-        addToken(match('=') ? MULTPLY_ASS_OP : MULTIPLY_OP);
+        handleAsterisk();
         break;
     case '%':
         addToken(match('=') ? MODULO_ASS_OP : MODULO_OP);

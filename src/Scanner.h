@@ -7,6 +7,7 @@
 class Scanner {
 
     using TokenRef = std::shared_ptr<Token>;
+    using Indices = std::stack<uint32_t>;
     using TokenVec = std::vector<TokenRef>;
     using TokenSet = std::unordered_set<std::string>;
     using IdSet = std::unordered_set<std::string>;
@@ -20,6 +21,7 @@ public:
             m_start = m_current;
             scanToken();
         }
+        finalCheck();
 
         return m_tokens;
     }
@@ -38,6 +40,7 @@ public:
 
 private:
     const std::string m_source;
+    Indices m_binaryOps, m_sUnaryOps, m_dUnaryOps, m_assOps;
     TokenVec m_tokens;
     TokenSet m_userDefinedTokens;
     IdSet m_idsDefined;
@@ -51,6 +54,30 @@ private:
     void number();
     void word();
     void specWords();
+
+    void finalCheck() {
+        // Backtrack checking
+
+        // Check if op is surounded by value "1 + 1"
+        checkOps(m_binaryOps, [&](TokenType first, TokenType last) {
+            return TokenUtils::isValue(first) && TokenUtils::isValue(last);
+        });
+
+        // Checkk if op is followed by value "+1"
+        checkOps(m_sUnaryOps, [&](TokenType, TokenType next) {
+            return TokenUtils::isValue(next);
+        });
+
+        // Check if identifier is preceeded or proceeded by op "++x or x++"
+        checkOps(m_dUnaryOps, [&](TokenType first, TokenType last) {
+            return TokenUtils::isIdentifier(first) || TokenUtils::isIdentifier(last);
+        });
+
+        // Check if if op is surrounded by identifier and value "x = 1"
+        checkOps(m_assOps, [&](TokenType first, TokenType last) {
+            return TokenUtils::isIdentifier(first) && TokenUtils::isValue(last);
+        });
+    }
 
     void addToken(TokenType type, uint32_t line = -1) {
         std::string text = TokenUtils::substring(m_start, m_current, m_source);
@@ -136,40 +163,38 @@ private:
     void handlePlus() {
         if (match('=')) {
             addToken(ADD_ASS_OP);
+            pushOp(m_assOps);
             return;
         }
 
-        TokenType type;
+        TokenType type = UNKNOWN;
 
         if (match('+')) {
-            type = TokenUtils::isIdentifier(lastToken()) ? POST_INCRMNT_OP : PRE_INCRMNT_OP;
+            addToken(TokenUtils::isIdentifier(lastToken()) ? POST_INCRMNT_OP : PRE_INCRMNT_OP);
+            pushOp(m_dUnaryOps);
         }
         else {
-            type = (TokenUtils::isValue(lastToken()) || lastToken() == STR_LITERAL) ? ADD_OP : POSITIVE_OP;
-        }
-
-        if (!unknownArithmetic()) {
-            addToken(type);
+            addToken((TokenUtils::isValue(lastToken()) || lastToken() == STR_LITERAL) ? ADD_OP : POSITIVE_OP);
+            lastToken() == ADD_OP ? pushOp(m_binaryOps) : pushOp(m_sUnaryOps);
         }
     }
 
     void handleMinus() {
         if (match('=')) {
             addToken(SUBTRCT_ASS_OP);
+            pushOp(m_assOps);
             return;
         }
 
         TokenType type;
 
         if (match('-')) {
-            type = TokenUtils::isIdentifier(lastToken()) ? POST_DECRMNT_OP : PRE_DECRMNT_OP;
+            addToken(TokenUtils::isIdentifier(lastToken()) ? POST_DECRMNT_OP : PRE_DECRMNT_OP);
+            pushOp(m_dUnaryOps);
         }
         else {
-            type = TokenUtils::isValue(lastToken()) ? SUBTRACT_OP : NEGATIVE_OP;
-        }
-
-        if (!unknownArithmetic()) {
-            addToken(type);
+            addToken(TokenUtils::isValue(lastToken()) ? SUBTRACT_OP : NEGATIVE_OP);
+            lastToken() == SUBTRACT_OP ? pushOp(m_binaryOps) : pushOp(m_sUnaryOps);
         }
     }
 
@@ -190,7 +215,13 @@ private:
         }
         else {
             addToken(match('=') ? DIVIDE_ASS_OP : DIVIDE_OP);
+            lastToken() == DIVIDE_ASS_OP ? pushOp(m_assOps) : pushOp(m_binaryOps);
         }
+    }
+
+    void handleAsterisk() {
+        addToken(match('=') ? MULTPLY_ASS_OP : MULTIPLY_OP);
+        lastToken() == MULTPLY_ASS_OP ? pushOp(m_assOps) : pushOp(m_binaryOps);
     }
 
     void singleLineComment() {
@@ -214,5 +245,33 @@ private:
             advance();
         }
         addToken(MULTILINE_COMNT, currentLine);
+    }
+
+    void pushOp(Indices &stack) {
+        stack.push(m_tokens.size() - 1);
+    }
+
+    void checkOps(Indices &stack, const std::function<bool(TokenType first, TokenType last)> &condition) {
+        auto getToken = [&](uint32_t index) {
+            return std::static_pointer_cast<DefToken>(m_tokens[index]);
+        };
+
+        while (!stack.empty()) {
+            uint32_t index = stack.top();
+            auto current = getToken(index);
+
+            if (index - 1 < 0 || index + 1 >= m_tokens.size()) {
+                current->setType(UNKNOWN);
+                continue;
+            }
+
+            TokenType first = getToken(index - 1)->type();
+            TokenType last = getToken(index + 1)->type();
+
+            if (!condition(first, last)) {
+                current->setType(UNKNOWN);
+            }
+            stack.pop();
+        }
     }
 };
