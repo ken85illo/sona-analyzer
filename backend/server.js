@@ -23,7 +23,7 @@ function processLexemeAndTokens(output) {
         })
     }
 
-    if(CODE_LINE_INDICES_LIST.length === 1) {
+    if (CODE_LINE_INDICES_LIST.length === 1) {
         CODE_LINE_INDICES_LIST[0].line_last_index = output.length - 1;
     }
 
@@ -31,14 +31,14 @@ function processLexemeAndTokens(output) {
         // Sets upper boundary of the line. Indicates up to what index a line consumes.
         for (let i = CODE_LINE_INDICES_LIST.length - 1; i > 0; i--) {
             let current_line_object = CODE_LINE_INDICES_LIST.at(i);
-            
+
             if (i === CODE_LINE_INDICES_LIST.length - 1) {
                 current_line_object.line_last_index = output.length - 1;
             }
-            
+
             // Gets the line object stored at index i - 1 in CODE_LINE_INDICES_LIST 
             let next_line_object = CODE_LINE_INDICES_LIST.at(i - 1);
-            
+
             next_line_object.line_last_index = current_line_object.index - 1;
         }
     }
@@ -117,7 +117,7 @@ const { spawn } = require('child_process');
 const exePath = path.join(__dirname, '../bin/Release/sona_lexical_analyzer');
 
 // Middleware for parsing JSON
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 app.use(cors());
 // Enable CORS for all routes and origins
