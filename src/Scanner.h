@@ -284,6 +284,9 @@ private:
     }
 
     bool userDefIdentifier() {
+        if (m_tokens.empty()) {
+            return false;
+        }
         return m_userDefinedTokens.find(m_tokens.back()->lexeme()) != m_userDefinedTokens.end() ||
                lastToken() == MAC_STATE_RESW;
     }
