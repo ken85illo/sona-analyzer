@@ -9,6 +9,7 @@ class Scanner {
     using TokenRef = std::shared_ptr<Token>;
     using TokenVec = std::vector<TokenRef>;
     using TokenSet = std::unordered_set<std::string>;
+    using IdSet = std::unordered_set<std::string>;
 
 public:
     Scanner(const std::string &source)
@@ -39,6 +40,7 @@ private:
     const std::string m_source;
     TokenVec m_tokens;
     TokenSet m_userDefinedTokens;
+    IdSet m_idsDefined;
 
     uint32_t m_start = 0;
     uint32_t m_current = 0;
@@ -47,20 +49,26 @@ private:
     void scanToken();
     void string();
     void number();
-    void identifier();
+    void word();
+    void specWords();
 
-    void addToken(TokenType type) {
+    void addToken(TokenType type, uint32_t line = -1) {
         std::string text = TokenUtils::substring(m_start, m_current, m_source);
-        m_tokens.push_back(std::make_shared<DefToken>(type, text, m_line));
+        m_tokens.push_back(std::make_shared<DefToken>(type, text, (line == -1) ? m_line : line));
     }
 
     void addUserDefinedToken() {
-        using namespace std::literals::string_literals;
-
         std::string text = TokenUtils::substring(m_start, m_current, m_source);
         m_userDefinedTokens.insert(text);
 
         m_tokens.push_back(std::make_shared<UserToken>(text, m_line));
+    }
+
+    void addIdentifier() {
+        std::string text = TokenUtils::substring(m_start, m_current, m_source);
+        m_idsDefined.insert(text);
+
+        m_tokens.push_back(std::make_shared<DefToken>(IDENTIFIER, text, m_line));
     }
 
     bool isAtEnd() const {
@@ -193,8 +201,9 @@ private:
     }
 
     void multiLineComment() {
+        uint32_t currentLine = m_line;
         while (!(peek() == '*' && peekNext() == '/') && !isAtEnd()) {
-            if(peek() == '\n') {
+            if (peek() == '\n') {
                 ++m_line;
             }
             advance();
@@ -204,6 +213,6 @@ private:
             advance();
             advance();
         }
-        addToken(MULTILINE_COMNT);
+        addToken(MULTILINE_COMNT, currentLine);
     }
 };

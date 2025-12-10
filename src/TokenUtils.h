@@ -21,6 +21,15 @@ inline bool isValue(TokenType type) {
            type == POST_DECRMNT_OP;
 }
 
+inline bool isUserType(TokenType type) {
+    return type == MACHINE_TYPE_RESW || type == STRUCT_TYPE_RESW;
+}
+
+inline bool isPrimitiveType(TokenType type) {
+    return type == BOOL_TYPE_RESW || type == CHAR_TYPE_RESW || type == DOUBLE_TYPE_RESW || type == FLOAT_TYPE_RESW ||
+           type == INT_TYPE_RESW || type == VOID_TYPE_RESW || type == STRING_TYPE_RESW;
+}
+
 inline bool isIdentifier(TokenType type) {
     return type == IDENTIFIER;
 }

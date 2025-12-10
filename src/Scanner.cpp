@@ -79,7 +79,7 @@ void Scanner::scanToken() {
             number();
         }
         else if (TokenUtils::isAlpha(c) || c == '@') {
-            identifier();
+            word();
         }
         else {
             addToken(UNKNOWN);
@@ -117,25 +117,24 @@ void Scanner::number() {
     addToken(type);
 }
 
-void Scanner::identifier() {
+void Scanner::word() {
     while (TokenUtils::isAlphaNumeric(peek())) {
         advance();
-    }
-
-    // When we declare a machine it must be added to user defined token set
-    if (lastToken() == MACHINE_TYPE_RESW || lastToken() == STRUCT_TYPE_RESW) {
-        addUserDefinedToken();
-        return;
-    }
+    };
 
     std::string text = TokenUtils::substring(m_start, m_current, m_source);
 
-    // Check if a type is user defined
-    if (m_userDefinedTokens.find(text) != m_userDefinedTokens.end()) {
-        addUserDefinedToken();
-        return;
+    // Check for special Words, User defined types, and identifiers
+    if (specialWords.find(text) != specialWords.end()) {
+        addToken(specialWords.at(text));
     }
-
-    TokenType type = (specialWords.find(text) != specialWords.end()) ? specialWords.at(text) : IDENTIFIER;
-    addToken(type);
+    else if (TokenUtils::isUserType(lastToken()) || m_userDefinedTokens.find(text) != m_userDefinedTokens.end()) {
+        addUserDefinedToken();
+    }
+    else if (TokenUtils::isPrimitiveType(lastToken()) || m_idsDefined.find(text) != m_idsDefined.end()) {
+        addIdentifier();
+    }
+    else {
+        addToken(UNKNOWN);
+    }
 }
