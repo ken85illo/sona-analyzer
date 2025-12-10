@@ -260,23 +260,30 @@ private:
     }
 
     void checkOps(Indices &stack, const std::function<bool(TokenType first, TokenType last)> &condition) {
-        auto getToken = [&](uint32_t index) {
-            return std::static_pointer_cast<DefToken>(m_tokens[index]);
+        auto getToken = [&](int32_t index) {
+            return std::dynamic_pointer_cast<DefToken>(m_tokens[index]);
         };
 
         while (!stack.empty()) {
-            uint32_t index = stack.top();
+            int32_t index = stack.top();
             auto current = getToken(index);
 
             if (index - 1 < 0 || index + 1 >= m_tokens.size()) {
                 current->setType(UNKNOWN);
+                stack.pop();
                 continue;
             }
 
-            TokenType first = getToken(index - 1)->type();
-            TokenType last = getToken(index + 1)->type();
+            auto first = getToken(index - 1);
+            auto last = getToken(index + 1);
 
-            if (!condition(first, last)) {
+            if (!first || !last) {
+                current->setType(UNKNOWN);
+                stack.pop();
+                continue;
+            }
+
+            if (!condition(first->type(), last->type())) {
                 current->setType(UNKNOWN);
             }
             stack.pop();
@@ -284,7 +291,8 @@ private:
     }
 
     bool userDefIdentifier() {
-        if (!m_tokens.empty()) {
+        if (m_tokens.empty()) {
+            return false;
         }
         return m_userDefinedTokens.find(m_tokens.back()->lexeme()) != m_userDefinedTokens.end() ||
                lastToken() == MAC_STATE_RESW;
