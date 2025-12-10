@@ -131,7 +131,10 @@ void Scanner::word() {
     else if (TokenUtils::isUserType(lastToken()) || m_userDefinedTokens.find(text) != m_userDefinedTokens.end()) {
         addUserDefinedToken();
     }
-    else if (TokenUtils::isPrimitiveType(lastToken()) || m_idsDefined.find(text) != m_idsDefined.end()) {
+    else if (TokenUtils::isPrimitiveType(lastToken()) ||
+             userDefIdentifier() || // check if the identifier has user defined type
+             m_idsDefined.find(text) != m_idsDefined.end()) {
+
         addIdentifier();
     }
     else {

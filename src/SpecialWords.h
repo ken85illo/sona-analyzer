@@ -3,6 +3,8 @@
 #include "TokenType.h"
 
 const std::unordered_map<std::string, TokenType> specialWords = {
+    {         "true",         TRUE_LITERAL },
+    {        "false",        FALSE_LITERAL },
     {        "break",           BREAK_KEYW },
     {     "continue",        CONTINUE_KEYW },
     {          "for",             FOR_KEYW },

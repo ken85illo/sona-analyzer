@@ -19,6 +19,10 @@ public:
         return m_line;
     }
 
+    const std::string &lexeme() const {
+        return m_lexeme;
+    }
+
 protected:
     const std::string m_lexeme;
     const uint32_t m_line;

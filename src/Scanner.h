@@ -14,7 +14,14 @@ class Scanner {
 
 public:
     Scanner(const std::string &source)
-    : m_source(source) {}
+    : m_source(source) {
+        m_idsDefined.insert("readChar");
+        m_idsDefined.insert("readLine");
+        m_idsDefined.insert("print");
+        m_idsDefined.insert("parseInt");
+        m_idsDefined.insert("parseString");
+        m_idsDefined.insert("exit");
+    }
 
     const TokenVec &scanTokens() {
         while (!isAtEnd()) {
@@ -137,6 +144,7 @@ private:
         if (auto token = std::dynamic_pointer_cast<DefToken>(m_tokens.back())) {
             return token->type();
         }
+
         return UNKNOWN;
     }
 
@@ -273,5 +281,10 @@ private:
             }
             stack.pop();
         }
+    }
+
+    bool userDefIdentifier() {
+        return m_userDefinedTokens.find(m_tokens.back()->lexeme()) != m_userDefinedTokens.end() ||
+               lastToken() == MAC_STATE_RESW;
     }
 };
