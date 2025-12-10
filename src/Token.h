@@ -10,8 +10,10 @@ public:
 
     std::string toString() {
         std::stringstream stream;
+        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
 
-        stream << "#" << getTokenStr().length() << " " << getTokenStr() << ",#" << m_lexeme.length() << " " << m_lexeme;
+        stream << "#" << getTokenStr().length() << " " << getTokenStr() << ",#"
+               << converter.from_bytes(m_lexeme).length() << " " << m_lexeme;
         return stream.str();
     }
 

@@ -59,8 +59,8 @@ private:
     void scanToken();
     void string();
     void number();
-    void word();
     void specWords();
+    void word();
 
     void finalCheck() {
         // Backtrack checking
@@ -284,8 +284,7 @@ private:
     }
 
     bool userDefIdentifier() {
-        if (m_tokens.empty()) {
-            return false;
+        if (!m_tokens.empty()) {
         }
         return m_userDefinedTokens.find(m_tokens.back()->lexeme()) != m_userDefinedTokens.end() ||
                lastToken() == MAC_STATE_RESW;
