@@ -1,6 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Kodchasan:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Kodchasan:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 
+:root {
+    --header-height: 85px;
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -11,15 +15,16 @@
     display: flex;
     padding: 1em;
     gap: 1em;
-    margin: 10px;
-    padding: 10px;
-    max-height: 90vh;
+    margin: 0px 10px;
+    padding: 0px 10px;
+    padding-bottom: 20px;
+    height: max(calc(100% - var(--header-height)), 30%);
     overflow-y: hidden;
 }
 
 .lexical-analysis-table-container {
     overflow-y: scroll;
-    height: 80%;
+    height: 90%;
 }
 
 .text-editor-container {
@@ -29,7 +34,7 @@
     display: flex;
     flex-direction: column;
     gap: 1em;
-    height: 500px;
+    height: 98%;
     border: solid 1px;
     border-color: rgba(255, 255, 255, 0.3);
     border-radius: 20px;
@@ -58,7 +63,7 @@
 
 .lexical-analysis-container {
     width: 30%;
-    height: 500px;
+    height: 98%;
     border-radius: 20px;
     background: rgba(10, 10, 20, 0.3);
     backdrop-filter: blur(8px);
@@ -100,6 +105,8 @@ body {
         'Open Sans',
         'Helvetica Neue',
         sans-serif;
+    height: 100vh;
+    overflow: hidden;
 }
 
 th {
@@ -214,7 +221,8 @@ header {
     align-items: center;
     padding: 10px 10px;
     /* border-bottom: 1px solid rgba(255, 47, 47, 0.3); */
-    margin-bottom: 10px;
+    margin: 0px;
+    height: var(--header-height);
 }
 #btn-container {
     padding: 10px;
