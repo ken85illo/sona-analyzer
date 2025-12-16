@@ -14,10 +14,32 @@ const displayLexicalElements = () => {
         return
     }
     lineSpinner.disabled = false;
+    const filteredLines = lexicalAnalysis[lineSpinner.value]
 
-    const filteredLines = lexicalAnalysis.filter((current) => current.line == lineSpinner.value)
+    if (filteredLines === undefined) {
+        return
+    }
 
-    iterateLexicalAnalysis(filteredLines)
+    let html = "";
+    let i = 0;
+
+    // Reset table to default header
+    html += defaultContent;
+
+    for (const lexical_element of filteredLines) {
+        const color = i % 2 ? 'td-color-1' : 'td-color-2';
+
+        html += `
+            <tr>
+                <td class = "${color}">${lineSpinner.value}</td>
+                <td class = "${color}">${lexical_element.token}</td>
+                <td class = "${color}">${lexical_element.lexeme}</td>
+            </tr>
+        `;
+        i++;
+
+    }
+    table_elem.innerHTML = html;
 }
 
 const displayAllLexicalElements = () => {
@@ -26,20 +48,16 @@ const displayAllLexicalElements = () => {
     }
     lineSpinner.disabled = true;
 
-    iterateLexicalAnalysis(lexicalAnalysis)
-}
-
-const iterateLexicalAnalysis = (analysis) => {
     let html = "";
     let i = 0;
 
     // Reset table to default header
     html += defaultContent;
 
-    for (const line of analysis) {
-        const line_number = line.line;
+    for (const [line, elements] of Object.entries(lexicalAnalysis)) {
+        const line_number = line;
 
-        for (const lexical_element of line.elements) {
+        for (const lexical_element of elements) {
             const color = i % 2 ? 'td-color-1' : 'td-color-2';
 
             html += `
@@ -56,7 +74,6 @@ const iterateLexicalAnalysis = (analysis) => {
     table_elem.innerHTML = html;
 }
 
-
 const lexicalAnalyzer = async (text_JSON) => {
     try {
         const rawResponse = await fetch(URL, {
@@ -69,8 +86,8 @@ const lexicalAnalyzer = async (text_JSON) => {
 
         lexicalAnalysis = await rawResponse.json();
         lineSpinner.value = 1
-        lineSpinner.max = String(lexicalAnalysis.reduce((max, current) => {
-            const currentLine = parseInt(current.line)
+        lineSpinner.max = String(Object.entries(lexicalAnalysis).reduce((max, current) => {
+            const currentLine = parseInt(current[0])
             if (currentLine > max) {
                 return currentLine
             }

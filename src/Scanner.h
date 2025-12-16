@@ -35,21 +35,14 @@ public:
 
     void output() {
         uint32_t currentLine = 0;
-        ordered_json out = ordered_json::array();
+        ordered_json out;
 
         for (auto &elem: m_tokens) {
             if (currentLine != elem->line()) {
                 currentLine = elem->line();
-                out.push_back(
-                    {
-                        {     "line",           currentLine },
-                        { "elements", ordered_json::array() }
-                }
-                );
             }
 
-            auto &current = out.back();
-            current["elements"].push_back(
+            out[std::to_string(currentLine)].push_back(
                 {
                     {  "token",  elem->token() },
                     { "lexeme", elem->lexeme() }

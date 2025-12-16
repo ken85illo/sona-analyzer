@@ -4,7 +4,7 @@ const cors = require('cors');
 const app = express();
 
 function processLexemeAndTokens(output) {
-    console.log(output)
+    // console.log(output)
     return JSON.parse(output);
 }
 

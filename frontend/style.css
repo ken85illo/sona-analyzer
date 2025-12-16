@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Kodchasan:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Kodchasan:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
-   
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -23,7 +23,7 @@
 }
 
 .text-editor-container {
-    margin:5px;
+    margin: 5px;
     background-color: #151718;
     width: 80%;
     display: flex;
@@ -37,15 +37,20 @@
     box-shadow: 0 0 10px rgb(0, 0, 0);
 }
 
-#textarea-element{
+#textarea-element {
+    font-family: 'Times New Roman', Times, serif;
     overflow-y: scroll;
+}
+
+.cm-editor .cm-content {
+    font-family: 'Arial';
 }
 
 #top-bar {
     background-color: #101019;
     border-bottom: 2px solid #101019;
     font-weight: bold;
-    font-size: 30px;    
+    font-size: 30px;
     padding: 20px;
     text-align: center;
     margin-bottom: 20px;
@@ -64,21 +69,21 @@
     border-radius: 20px;
     padding: 10px;
     box-shadow: 0 0 10px rgb(0, 0, 0);
-   
 }
 .CodeMirror {
     height: 100%;
     width: 100%;
     font-size: 16px;
     flex: 1;
-    
 }
 
 body {
     /* background-color: #282828; /* Gruvbox Dark background */
     /* color: #ebdbb2; */
-    background-color: #0B021C;
-    background-image: url("/assets/grid.png"), radial-gradient(circle at -20% 1000%, #ff0000, #0B021C);
+    background-color: #0b021c;
+    background-image:
+        url('/assets/grid.png'),
+        radial-gradient(circle at -20% 1000%, #ff0000, #0b021c);
     background-position: center;
     background-size: cover;
     color: #cdd6f5;
@@ -106,7 +111,7 @@ th {
     width: 30px;
 }
 
-td{
+td {
     text-align: center;
     width: 50px;
 }
@@ -122,87 +127,79 @@ td{
 .bttn {
     font-family: 'Kodchasan', sans-serif;
     font-weight: 700;
-    background-color: #ff2f2f; 
+    background-color: #ff2f2f;
     color: #fff;
     border: solid 1px #ff2f2f;
     padding: 0.5em;
     border-radius: 10px;
-    box-shadow: 0 0 10px #ff2f2f, 0 0 30px rgba(255, 47, 47, 0.3);
+    box-shadow:
+        0 0 10px #ff2f2f,
+        0 0 30px rgba(255, 47, 47, 0.3);
     transition: all 0.3s ease-in-out;
 }
 
 .bttn:hover {
     cursor: pointer;
-    box-shadow: 0 0 20px #ff2f2f, 0 0 60px #ff2f2f;
-    transform: scale(1.05); 
+    box-shadow:
+        0 0 20px #ff2f2f,
+        0 0 60px #ff2f2f;
+    transform: scale(1.05);
 }
-#analyze-bttn{
+#analyze-bttn {
     transform: scale(0.98);
 }
-#analyze-bttn:hover{
+#analyze-bttn:hover {
     transform: scale(1.02);
 }
 
 .kodchasan-bold {
-  font-family: "Kodchasan", sans-serif;
-  font-weight: 700;
-  font-style: normal;
+    font-family: 'Kodchasan', sans-serif;
+    font-weight: 700;
+    font-style: normal;
 }
 
-input:disabled{
-    background-color:#181826;
-    color:#181826;
+input:disabled {
+    background-color: #181826;
+    color: #181826;
 }
-.codemirror_highlight{
-    background-color:#ff00006d;
+.codemirror_highlight {
+    background-color: #ff00006d;
 }
-
 
 ::-webkit-scrollbar {
-    width: 8px;               
-    height: 8px;             
+    width: 8px;
+    height: 8px;
 }
-
 
 ::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.3);
     border-radius: 4px;
 }
 
-
 ::-webkit-scrollbar-thumb {
-    background-color: #800011;      
-    border-radius: 10px;            
-    border: 2px solid transparent;  
-    background-clip: content-box;   
+    background-color: #800011;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
 }
-
 
 ::-webkit-scrollbar-thumb:hover {
-    background-color: #ff2f2f;      
-    box-shadow: 0 0 10px #ff2f2f;  
+    background-color: #ff2f2f;
+    box-shadow: 0 0 10px #ff2f2f;
 }
-
-{
-
-    scrollbar-width: thin; 
-  
-    scrollbar-color: #ff2f2f rgba(0, 0, 0, 0.3); 
-}
-
 
 header {
     display: flex;
-    justify-content: flex-end; 
+    justify-content: flex-end;
     padding-bottom: 20px;
     margin-bottom: 30px;
-   
 }
 
 .sona-image {
-    height: 40px; 
-    width: auto;  
-    filter: drop-shadow(0 0 2px #ff0022) drop-shadow(0 0 7px rgba(255, 0, 34, 0.308));
+    height: 40px;
+    width: auto;
+    filter: drop-shadow(0 0 2px #ff0022)
+        drop-shadow(0 0 7px rgba(255, 0, 34, 0.308));
     transition: filter 0.3s ease;
 }
 .sona-image:hover {
@@ -213,61 +210,70 @@ header {
 .main-header {
     width: 100%;
     display: flex;
-    justify-content: flex-end; 
-    align-items: center;    
-    padding: 10px 10px;      
+    justify-content: flex-end;
+    align-items: center;
+    padding: 10px 10px;
     /* border-bottom: 1px solid rgba(255, 47, 47, 0.3); */
-    margin-bottom: 10px;       
+    margin-bottom: 10px;
 }
 #btn-container {
     padding: 10px;
-    display:flex;
+    display: flex;
     flex-direction: column;
 }
-#analyze-bttn, #sample-bttn{
-    height:100%;
+#analyze-bttn,
+#sample-bttn {
+    height: 100%;
     margin: 5px;
 }
-#sample-bttn{
+#sample-bttn {
     background-color: #800011;
-    border-color:#800011;
-    box-shadow: 0 0 10px #800011, 0 0 30px rgba(123, 22, 22, 0.3);
+    border-color: #800011;
+    box-shadow:
+        0 0 10px #800011,
+        0 0 30px rgba(123, 22, 22, 0.3);
 }
 #sample-bttn:hover {
     cursor: pointer;
-    box-shadow: 0 0 20px #800011, 0 0 60px #7a1515;
-    transform: scale(1.05); 
+    box-shadow:
+        0 0 20px #800011,
+        0 0 60px #7a1515;
+    transform: scale(1.05);
 }
-#up-down{
-    display:flex;
+#up-down {
+    display: flex;
     flex-direction: column;
 }
-.spinner-btn{
+.spinner-btn {
     background-color: #800011;
-    color:white;
+    color: white;
     height: 100%;
-    width:20px;
+    width: 20px;
     border-radius: 7px;
-    box-shadow: 0 0 10px #800011, 0 0 30px rgba(123, 22, 22, 0.3);
+    box-shadow:
+        0 0 10px #800011,
+        0 0 30px rgba(123, 22, 22, 0.3);
     border: solid 1px;
-    border-color:#800011;
+    border-color: #800011;
 }
-.spinner-btn:hover{
+.spinner-btn:hover {
     cursor: pointer;
-    box-shadow: 0 0 20px #800011, 0 0 60px #7a1515;
+    box-shadow:
+        0 0 20px #800011,
+        0 0 60px #7a1515;
     transform: scale(1.04);
-    color:#9f4242;
+    color: #9f4242;
 }
-#button-div{
-    display:flex;
-    gap:2px;
+#button-div {
+    display: flex;
+    gap: 2px;
 }
 
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
-input[type=number] {
+input[type='number'] {
     -moz-appearance: textfield;
-} 
+}
