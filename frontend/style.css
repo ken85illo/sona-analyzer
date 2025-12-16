@@ -116,11 +116,11 @@ td {
     width: 50px;
 }
 
-.td-color-1 {
+#lexical-elements-table tr:nth-child(odd) td {
     border: 1px solid #9b091d;
 }
 
-.td-color-2 {
+#lexical-elements-table tr:nth-child(even) td {
     border: 1px solid #9e8282;
 }
 

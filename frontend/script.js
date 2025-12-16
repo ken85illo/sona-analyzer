@@ -21,22 +21,18 @@ const displayLexicalElements = () => {
     }
 
     let html = "";
-    let i = 0;
 
     // Reset table to default header
     html += defaultContent;
 
     for (const lexical_element of filteredLines) {
-        const color = i % 2 ? 'td-color-1' : 'td-color-2';
-
         html += `
             <tr>
-                <td class = "${color}">${lineSpinner.value}</td>
-                <td class = "${color}">${lexical_element.token}</td>
-                <td class = "${color}">${lexical_element.lexeme}</td>
+                <td>${lineSpinner.value}</td>
+                <td>${lexical_element.token}</td>
+                <td>${lexical_element.lexeme}</td>
             </tr>
         `;
-        i++;
 
     }
     table_elem.innerHTML = html;
@@ -49,7 +45,6 @@ const displayAllLexicalElements = () => {
     lineSpinner.disabled = true;
 
     let html = "";
-    let i = 0;
 
     // Reset table to default header
     html += defaultContent;
@@ -58,16 +53,13 @@ const displayAllLexicalElements = () => {
         const line_number = line;
 
         for (const lexical_element of elements) {
-            const color = i % 2 ? 'td-color-1' : 'td-color-2';
-
             html += `
                 <tr>
-                    <td class = "${color}">${line_number}</td>
-                    <td class = "${color}">${lexical_element.token}</td>
-                    <td class = "${color}">${lexical_element.lexeme}</td>
+                    <td>${line_number}</td>
+                    <td>${lexical_element.token}</td>
+                    <td>${lexical_element.lexeme}</td>
                 </tr>
             `;
-            i++;
 
         }
     }
