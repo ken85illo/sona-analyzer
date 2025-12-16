@@ -8,14 +8,7 @@ public:
     Token(const std::string &lexeme, uint32_t line)
     : m_lexeme(lexeme), m_line(line) {}
 
-    std::string toString() {
-        std::stringstream stream;
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
-
-        stream << "#" << getTokenStr().length() << " " << getTokenStr() << ",#"
-               << converter.from_bytes(m_lexeme).length() << " " << m_lexeme;
-        return stream.str();
-    }
+    virtual std::string token() = 0;
 
     uint32_t line() const {
         return m_line;
@@ -28,9 +21,6 @@ public:
 protected:
     const std::string m_lexeme;
     const uint32_t m_line;
-
-private:
-    virtual std::string getTokenStr() = 0;
 };
 
 class DefToken : public Token {
@@ -47,7 +37,7 @@ public:
     }
 
 private:
-    std::string getTokenStr() override {
+    std::string token() override {
         std::stringstream stream;
         stream << magic_enum::enum_name(m_type);
         return stream.str();
@@ -62,7 +52,7 @@ public:
     : Token(lexeme, line) {}
 
 private:
-    std::string getTokenStr() override {
+    std::string token() override {
         return TokenUtils::getTypeName(m_lexeme);
     }
 };

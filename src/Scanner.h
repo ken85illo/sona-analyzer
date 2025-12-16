@@ -35,14 +35,29 @@ public:
 
     void output() {
         uint32_t currentLine = 0;
-        for (auto &token: m_tokens) {
-            if (currentLine != token->line()) {
-                currentLine = token->line();
-                std::cout << "[" << currentLine << "], ";
+        ordered_json out = ordered_json::array();
+
+        for (auto &elem: m_tokens) {
+            if (currentLine != elem->line()) {
+                currentLine = elem->line();
+                out.push_back(
+                    {
+                        {     "line",           currentLine },
+                        { "elements", ordered_json::array() }
+                }
+                );
             }
 
-            std::cout << token->toString() << ",";
+            auto &current = out.back();
+            current["elements"].push_back(
+                {
+                    {  "token",  elem->token() },
+                    { "lexeme", elem->lexeme() }
+            }
+            );
         }
+
+        std::cout << out.dump(4);
     }
 
 private:

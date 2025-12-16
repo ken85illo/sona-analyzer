@@ -9,6 +9,7 @@
 
 // Data Structures
 #include <functional>
+#include <nlohmann/json.hpp>
 #include <set>
 #include <sstream>
 #include <stack>
@@ -20,3 +21,6 @@
 
 // Magic Enum
 #include <magic_enum/magic_enum.hpp>
+
+using json = nlohmann::json;
+using ordered_json = nlohmann::ordered_json;
