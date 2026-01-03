@@ -1,4 +1,5 @@
 #include "AstPrinter.h"
+#include "Parser.h"
 #include "Scanner.h"
 #include "TokenType.h"
 
@@ -7,16 +8,18 @@ std::string readFromInput(std::istream &source) {
 }
 
 int main(int argc, char *argv[]) {
-    // std::string input = readFromInput(std::cin);
-    // Scanner scanner(input);
-    // scanner.scanTokens();
-    // scanner.output();
+    std::string input = readFromInput(std::cin);
+    Scanner scanner(input);
+    const TokenVec &tokens = scanner.scanTokens();
+    scanner.output();
+    std::cout << "\n\n";
 
-    Ref<BinaryExpr> expression = MakeRef<BinaryExpr>(
-        MakeRef<UnaryExpr>(MakeRef<DefToken>(SUBTRACT_OP, "-", 1), MakeRef<LiteralExpr>(MakeRef<std::string>("123"))),
-        MakeRef<DefToken>(MULTIPLY_OP, "*", 1),
-        MakeRef<GroupingExpr>(MakeRef<LiteralExpr>(MakeRef<std::string>("45.67")))
-    );
+    Parser parser(tokens);
+    Ref<Expr> expression = parser.parse();
+
+    if (hadError()) {
+        exit(-1);
+    }
 
     std::cout << MakeRef<AstPrinter>()->print(expression);
 }
