@@ -15,33 +15,39 @@
         />
     </head>
 
-    
     <body>
-
         <header class="main-header">
-             <img src="/assets/SONA_logo_1.png" alt="SONA Logo" class="sona-image">
+            <img
+                src="/assets/SONA_logo_1.png"
+                alt="SONA Logo"
+                class="sona-image"
+            />
         </header>
-        
-        
+
         <div class="main-container">
             <div id="btn-container">
-                <button onclick="handleSubmit()" id="analyze-bttn" class="bttn">ANALYZE CODE</button>
-                <button onclick="insertSample()" id="sample-bttn" class="bttn">SAMPLE CODE</button>
+                <button onclick="handleSubmit()" id="analyze-bttn" class="bttn">
+                    ANALYZE CODE
+                </button>
+                <button onclick="insertSample()" id="sample-bttn" class="bttn">
+                    SAMPLE CODE
+                </button>
             </div>
-            
 
             <div class="text-editor-container">
                 <h2>Source Code</h2>
                 <textarea
-                id="textarea-element"
-                placeholder="enter program"
-                wrap="off"
+                    id="textarea-element"
+                    placeholder="enter program"
+                    wrap="off"
                 ></textarea>
             </div>
 
             <div class="lexical-analysis-container">
                 <div id="button-div">
-                    <button onclick="switchView()" class="bttn">Switch View</button>
+                    <button onclick="switchView()" class="bttn">
+                        Switch View
+                    </button>
                     <input
                         type="number"
                         id="line-number"
@@ -52,13 +58,27 @@
                         class="bttn"
                     />
                     <div id="up-down">
-                        <button class="spinner-btn" id="up" onclick="spinnerIncrement()">▲</button>
-                        <button class="spinner-btn" id="down" onclick="spinnerDecrement()">▼</button>
+                        <button
+                            class="spinner-btn"
+                            id="up"
+                            onclick="spinnerIncrement()"
+                        >
+                            ▲
+                        </button>
+                        <button
+                            class="spinner-btn"
+                            id="down"
+                            onclick="spinnerDecrement()"
+                        >
+                            ▼
+                        </button>
                     </div>
                 </div>
-                
 
                 <div class="lexical-analysis-table-container">
+                    <div id="loading-indicator" style="display: none">
+                        Loading lexical analysis...
+                    </div>
                     <table id="lexical-elements-table">
                         <tr>
                             <th id="th-line-number">Line</th>
@@ -67,14 +87,12 @@
                         </tr>
                     </table>
                 </div>
-                
             </div>
-
         </div>
-        
+
         <br />
         <br />
-        
+
         <div id="output"></div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>

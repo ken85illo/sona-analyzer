@@ -1,97 +1,90 @@
-const textarea_elem = document.getElementById("textarea-element");
-const table_elem = document.getElementById("lexical-elements-table");
-const lineSpinner = document.getElementById("line-number")
+const textarea_elem = document.getElementById('textarea-element')
+const table_elem = document.getElementById('lexical-elements-table')
+const loadingIndicator = document.getElementById('loading-indicator')
+const lineSpinner = document.getElementById('line-number')
 const defaultContent = table_elem.innerHTML
 let lexicalAnalysis = null
-let view = 0;
-let highlightedLine = null;
+let view = 0
+let highlightedLine = null
 
-const PORT = 8081;
-const URL = `http://localhost:${PORT}/api/lexical-analyzer`;
+const PORT = 8081
+const URL = `http://localhost:${PORT}/api/lexical-analyzer`
 
-const displayLexicalElements = () => {
-    if (lexicalAnalysis === null) {
-        return
-    }
-    lineSpinner.disabled = false;
-    const filteredLines = lexicalAnalysis[lineSpinner.value]
+const displayLexicalElements = (showAll = false) => {
+    if (lexicalAnalysis === null) return
 
-    if (filteredLines === undefined) {
-        return
-    }
+    lineSpinner.disabled = showAll
 
-    let html = "";
+    let html = ''
 
     // Reset table to default header
-    html += defaultContent;
+    html += defaultContent
 
-    for (const lexical_element of filteredLines) {
-        html += `
-            <tr>
-                <td>${lineSpinner.value}</td>
-                <td>${lexical_element.token}</td>
-                <td>${lexical_element.lexeme}</td>
-            </tr>
-        `;
+    if (showAll) {
+        // Display all lines
+        for (const [line, elements] of Object.entries(lexicalAnalysis)) {
+            for (const lexical_element of elements) {
+                html += `
+                    <tr>
+                        <td>${line}</td>
+                        <td>${lexical_element.token}</td>
+                        <td>${lexical_element.lexeme}</td>
+                    </tr>
+                `
+            }
+        }
+    } else {
+        // Display only the selected line
+        const filteredLine = lexicalAnalysis[lineSpinner.value]
+        if (!filteredLine) return
 
-    }
-    table_elem.innerHTML = html;
-}
-
-const displayAllLexicalElements = () => {
-    if (lexicalAnalysis === null) {
-        return
-    }
-    lineSpinner.disabled = true;
-
-    let html = "";
-
-    // Reset table to default header
-    html += defaultContent;
-
-    for (const [line, elements] of Object.entries(lexicalAnalysis)) {
-        const line_number = line;
-
-        for (const lexical_element of elements) {
+        for (const lexical_element of filteredLine) {
             html += `
                 <tr>
-                    <td>${line_number}</td>
+                    <td>${lineSpinner.value}</td>
                     <td>${lexical_element.token}</td>
                     <td>${lexical_element.lexeme}</td>
                 </tr>
-            `;
-
+            `
         }
     }
-    table_elem.innerHTML = html;
+
+    table_elem.innerHTML = html
 }
 
 const lexicalAnalyzer = async (text_JSON) => {
     try {
+        loadingIndicator.style.display = 'block'
+        table_elem.innerHTML = ''
+
         const rawResponse = await fetch(URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(text_JSON)
-        });
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(text_JSON),
+        })
 
-        if (!rawResponse.ok) throw new Error("Server error");
+        if (!rawResponse.ok) throw new Error('Server error')
 
-        lexicalAnalysis = await rawResponse.json();
+        lexicalAnalysis = await rawResponse.json()
         lineSpinner.value = 1
-        lineSpinner.max = String(Object.entries(lexicalAnalysis).reduce((max, current) => {
-            const currentLine = parseInt(current[0])
-            if (currentLine > max) {
-                return currentLine
-            }
-            return max
-        }, 0))
-        console.log(lexicalAnalysis);
-        displayAllLexicalElements(); //display all elements
+        lineSpinner.max = String(
+            Object.entries(lexicalAnalysis).reduce((max, current) => {
+                const currentLine = parseInt(current[0])
+                if (currentLine > max) {
+                    return currentLine
+                }
+                return max
+            }, 0)
+        )
+        console.log(lexicalAnalysis)
+        displayLexicalElements(true) //display all elements
         //displayLexicalElements();
-        console.error("Fetch error:", err);
     } catch (err) {
+        console.error('Fetch error:', err)
+    } finally {
+        loadingIndicator.style.display = 'none'
     }
-};
+}
 
 //used codemirror as the editor alias
 const editor = CodeMirror.fromTextArea(
@@ -99,7 +92,7 @@ const editor = CodeMirror.fromTextArea(
     {
         lineNumbers: true,
         mode: 'text/x-csrc',
-        theme: "seti",
+        theme: 'seti',
         tabSize: 4,
         indentUnit: 4,
         indentWithTabs: false,
@@ -108,61 +101,70 @@ const editor = CodeMirror.fromTextArea(
 
 const switchView = () => {
     if (view === 0) {
-        displayLexicalElements();
-        highlightEditorLine(lineSpinner.value);
-        view = 1;
-        return;
+        displayLexicalElements()
+        highlightEditorLine(lineSpinner.value)
+        view = 1
+        return
     }
-    editor.removeLineClass(highlightedLine, "background", "codemirror_highlight");
-    displayAllLexicalElements();
-    view = 0;
+    editor.removeLineClass(
+        highlightedLine,
+        'background',
+        'codemirror_highlight'
+    )
+    displayLexicalElements(true)
+    view = 0
 }
 
 const handleSubmit = () => {
-
     // Provide format of JSON to be sent
     const text_JSON = {
-        text: editor.getValue()//replaced the element
+        text: editor.getValue(), //replaced the element
     }
 
-    console.log("Handle Submit");
+    console.log('Handle Submit')
 
-    lexicalAnalyzer(text_JSON);
+    lexicalAnalyzer(text_JSON)
 }
 
 // Adds tabs instead of manually adding white-spaces
 textarea_elem.addEventListener('keydown', (e) => {
     if (e.key === 'Tab') {
-        e.preventDefault();
+        e.preventDefault()
 
-        const start = textarea_elem.selectionStart;
-        const end = textarea_elem.selectionEnd;
+        const start = textarea_elem.selectionStart
+        const end = textarea_elem.selectionEnd
 
         // Insert tab at cursor position
         textarea_elem.value =
-            textarea_elem.value.substring(0, start) + "\t" + textarea_elem.value.substring(end);
+            textarea_elem.value.substring(0, start) +
+            '\t' +
+            textarea_elem.value.substring(end)
 
         // Move the cursor after the inserted tab
-        textarea_elem.selectionStart = textarea_elem.selectionEnd = start + 1;
+        textarea_elem.selectionStart = textarea_elem.selectionEnd = start + 1
     }
 })
 
 lineSpinner.addEventListener('change', (e) => {
-    displayLexicalElements();
-    highlightEditorLine(lineSpinner.value);
+    displayLexicalElements()
+    highlightEditorLine(lineSpinner.value)
 })
 
 function highlightEditorLine(lineNumber) {
-    const lineIndex = Number(lineNumber) - 1;
+    const lineIndex = Number(lineNumber) - 1
 
     if (highlightedLine !== null) {
-        editor.removeLineClass(highlightedLine, "background", "codemirror_highlight");
+        editor.removeLineClass(
+            highlightedLine,
+            'background',
+            'codemirror_highlight'
+        )
     }
 
-    editor.addLineClass(lineIndex, "background", "codemirror_highlight");
+    editor.addLineClass(lineIndex, 'background', 'codemirror_highlight')
 
-    highlightedLine = lineIndex;
-    editor.scrollIntoView({ line: lineIndex, ch: 0 }, 100);
+    highlightedLine = lineIndex
+    editor.scrollIntoView({ line: lineIndex, ch: 0 }, 100)
 }
 
 function insertSample() {
@@ -245,24 +247,22 @@ int main() {
         thermometer.temperature = temperatureInput;
     }
 }
-    `);
+    `)
 }
 
 function spinnerIncrement() {
-    if (Number(lineSpinner.value) >= lineSpinner.max)
-        return;
+    if (Number(lineSpinner.value) >= lineSpinner.max) return
 
-    lineSpinner.value = Number(lineSpinner.value) + 1;
+    lineSpinner.value = Number(lineSpinner.value) + 1
 
-    displayLexicalElements();
-    highlightEditorLine(lineSpinner.value);
+    displayLexicalElements()
+    highlightEditorLine(lineSpinner.value)
 }
 
 function spinnerDecrement() {
-    if (lineSpinner.value <= 1)
-        return;
-    lineSpinner.value = Number(lineSpinner.value) - 1;
+    if (lineSpinner.value <= 1) return
+    lineSpinner.value = Number(lineSpinner.value) - 1
 
-    displayLexicalElements();
-    highlightEditorLine(lineSpinner.value);
+    displayLexicalElements()
+    highlightEditorLine(lineSpinner.value)
 }
