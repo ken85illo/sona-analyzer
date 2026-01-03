@@ -39,7 +39,7 @@ std::vector<Str> split(StrRef s, char delim) {
 }
 
 void defineType(std::ofstream &file, StrRef baseName, StrRef className, StrRef fieldList) {
-    file << "class " << className << baseName << " : " << baseName << " {\n";
+    file << "class " << className << baseName << " : public " << baseName << "{\n";
     file << "public:\n";
 
     auto fields = split(fieldList, ',');
@@ -66,7 +66,7 @@ void defineType(std::ofstream &file, StrRef baseName, StrRef className, StrRef f
         auto strList = split(fields[i], ' ');
         auto name = trim(strList[1]);
 
-        file << "m_" << name << "(" << name << ")";
+        file << name << "(" << name << ")";
 
         if (i < fields.size() - 1) {
             file << ", ";
@@ -74,39 +74,39 @@ void defineType(std::ofstream &file, StrRef baseName, StrRef className, StrRef f
     }
     file << " {}\n\n";
 
-    file << "    std::string accept(Ref<Visitor> visitor) override {\n";
-    file << "        return visitor->visit" << className << baseName << "(this);\n";
+    file << "    std::string accept(Visitor& visitor) override {\n";
+    file << "        return visitor.visit" << className << baseName << "(StaticCast<";
+    file << className << baseName << ">(shared_from_this()));\n";
     file << "    }\n\n";
-
-    file << "private:\n";
 
     for (auto field: fields) {
         auto strList = split(field, ' ');
         auto type = trim(strList[0]);
         auto name = trim(strList[1]);
 
-        file << "    const Ref<" << type << "> m_" << name << ";\n";
+        file << "    const Ref<" << type << "> " << name << ";\n";
     }
 
     file << "};\n\n";
 }
 
 void defineVisitor(std::ofstream &file, StrRef baseName, const std::vector<Str> &types) {
-    file << "    class Visitor {\n";
-    file << "    public:\n";
+    file << "class Visitor {\n";
+    file << "public:\n";
 
     for (auto type: types) {
-        auto typeName = trim(split(type, ':')[0]);
+        auto typeName = trim(split(type, '=')[0]);
         auto lowerBaseName = baseName;
         std::transform(lowerBaseName.begin(), lowerBaseName.end(), lowerBaseName.begin(), [](unsigned char c) {
             return std::tolower(c);
         });
 
-        file << "        virtual std::string visit" << typeName << baseName << "(";
+        file << "    virtual std::string visit" << typeName << baseName << "(";
         file << "Ref<" << typeName << baseName << "> " << lowerBaseName << ") = 0;\n";
     }
 
-    file << "    };\n\n";
+    file << "    virtual ~Visitor() = default;\n";
+    file << "};\n\n";
 }
 
 void defineAst(StrRef outputDir, StrRef baseName, const std::vector<Str> &types) {
@@ -115,25 +115,27 @@ void defineAst(StrRef outputDir, StrRef baseName, const std::vector<Str> &types)
 
     std::ofstream file(path);
 
+    file << "#pragma once" << "\n";
     file << "#include \"Ref.h\"" << "\n";
     file << "#include \"Token.h\"" << "\n\n";
 
     for (auto type: types) {
-        auto typeName = trim(split(type, ':')[0]);
+        auto typeName = trim(split(type, '=')[0]);
         file << "class " << typeName << baseName << ";\n";
     }
-    file << "\n";
+    file << "class Visitor;\n\n";
 
-    file << "class " << baseName << " {\n";
+    file << "class " << baseName << ": public std::enable_shared_from_this<" << baseName << "> {\n";
     file << "public:\n";
-    defineVisitor(file, baseName, types);
-    file << "protected:\n";
-    file << "    virtual std::string accept(Ref<Visitor> visitor) = 0;\n";
+    file << "    virtual std::string accept(Visitor& visitor) = 0;\n";
+    file << "    virtual ~" << baseName << "() = default;\n";
     file << "};\n\n";
+
+    defineVisitor(file, baseName, types);
 
     // AST Classes
     for (auto type: types) {
-        auto strList = split(type, ':');
+        auto strList = split(type, '=');
         Str className = trim(strList[0]);
         Str fields = trim(strList[1]);
         defineType(file, baseName, className, fields);
