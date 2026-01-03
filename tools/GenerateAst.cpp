@@ -75,7 +75,7 @@ void defineType(std::ofstream &file, StrRef baseName, StrRef className, StrRef f
     file << " {}\n\n";
 
     file << "    std::string accept(Ref<Visitor> visitor) override {\n";
-    file << "        return visitor->visit" << className << baseName << "(*this);\n";
+    file << "        return visitor->visit" << className << baseName << "(this);\n";
     file << "    }\n\n";
 
     file << "private:\n";
@@ -103,7 +103,7 @@ void defineVisitor(std::ofstream &file, StrRef baseName, const std::vector<Str> 
         });
 
         file << "        virtual std::string visit" << typeName << baseName << "(";
-        file << typeName << baseName << " " << lowerBaseName << ") = 0;\n";
+        file << "Ref<" << typeName << baseName << "> " << lowerBaseName << ") = 0;\n";
     }
 
     file << "    };\n\n";
