@@ -64,16 +64,10 @@ private:
             size_t index = stack.top();
             auto current = getToken(index);
 
-            if (index - 1 < 0 || index + 1 >= m_tokens.size()) {
-                current->setType(UNKNOWN);
-                stack.pop();
-                continue;
-            }
+            auto first = (index == 0) ? UNKNOWN : getToken(index - 1)->type();
+            auto last = (index + 1 >= m_tokens.size()) ? UNKNOWN : getToken(index + 1)->type();
 
-            auto first = getToken(index - 1);
-            auto last = getToken(index + 1);
-
-            if (!condition(first->type(), last->type())) {
+            if (!condition(first, last)) {
                 current->setType(UNKNOWN);
             }
             stack.pop();
