@@ -97,4 +97,7 @@ enum TokenType {
 
     // Undefined token
     UNKNOWN,
+
+    // User Defined token
+    USER_DEFINED_RESW,
 };

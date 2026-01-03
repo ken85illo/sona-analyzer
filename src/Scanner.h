@@ -3,38 +3,27 @@
 #include "Token.h"
 #include "TokenType.h"
 #include "TokenUtils.h"
+#include "Validator.h"
 
 class Scanner {
-
-    using TokenRef = std::shared_ptr<Token>;
-    using Indices = std::stack<uint32_t>;
-    using TokenVec = std::vector<TokenRef>;
-    using TokenSet = std::unordered_set<std::string>;
     using IdSet = std::unordered_set<std::string>;
 
 public:
     Scanner(const std::string &source)
-    : m_source(source) {
-        m_idsDefined.insert("readChar");
-        m_idsDefined.insert("readLine");
-        m_idsDefined.insert("print");
-        m_idsDefined.insert("parseInt");
-        m_idsDefined.insert("parseString");
-        m_idsDefined.insert("exit");
-    }
+    : m_source(source), m_validator(m_tokens) {}
 
     const TokenVec &scanTokens() {
         while (!isAtEnd()) {
             m_start = m_current;
             scanToken();
         }
-        finalCheck();
+        m_validator.finalCheck();
 
         return m_tokens;
     }
 
     void output() {
-        uint32_t currentLine = 0;
+        size_t currentLine = 0;
         ordered_json out;
 
         for (auto &elem: m_tokens) {
@@ -55,14 +44,16 @@ public:
 
 private:
     const std::string m_source;
-    Indices m_binaryOps, m_sUnaryOps, m_dUnaryOps, m_assOps;
+
     TokenVec m_tokens;
     TokenSet m_userDefinedTokens;
-    IdSet m_idsDefined;
+    IdSet m_idsDefined{ "readChar", "readLine", "print", "parseInt", "parseString", "exit" };
 
-    uint32_t m_start = 0;
-    uint32_t m_current = 0;
-    uint32_t m_line = 1;
+    size_t m_start = 0;
+    size_t m_current = 0;
+    size_t m_line = 1;
+
+    Validator m_validator;
 
     void scanToken();
     void string();
@@ -70,33 +61,9 @@ private:
     void specWords();
     void word();
 
-    void finalCheck() {
-        // Backtrack checking
-
-        // Check if op is surounded by value "1 + 1"
-        checkOps(m_binaryOps, [&](TokenType first, TokenType last) {
-            return TokenUtils::isValue(first) && TokenUtils::isValue(last);
-        });
-
-        // Checkk if op is followed by value "+1"
-        checkOps(m_sUnaryOps, [&](TokenType, TokenType next) {
-            return TokenUtils::isValue(next);
-        });
-
-        // Check if identifier is preceeded or proceeded by op "++x or x++"
-        checkOps(m_dUnaryOps, [&](TokenType first, TokenType last) {
-            return TokenUtils::isIdentifier(first) || TokenUtils::isIdentifier(last);
-        });
-
-        // Check if if op is surrounded by identifier and value "x = 1"
-        checkOps(m_assOps, [&](TokenType first, TokenType last) {
-            return TokenUtils::isIdentifier(first) && TokenUtils::isValue(last);
-        });
-    }
-
-    void addToken(TokenType type, uint32_t line = -1) {
+    void addToken(TokenType type, std::optional<size_t> line = std::nullopt) {
         std::string text = TokenUtils::substring(m_start, m_current, m_source);
-        m_tokens.push_back(std::make_shared<DefToken>(type, text, (line == -1) ? m_line : line));
+        m_tokens.push_back(std::make_shared<DefToken>(type, text, line.value_or(m_line)));
     }
 
     void addUserDefinedToken() {
@@ -144,27 +111,13 @@ private:
         return m_source[m_current++];
     }
 
-    TokenType lastToken() const {
-        if (m_tokens.empty()) {
+    TokenType lastToken(size_t back = 0) const {
+        if (m_tokens.size() <= back) {
             return UNKNOWN;
         }
 
-        if (auto token = std::dynamic_pointer_cast<DefToken>(m_tokens.back())) {
-            return token->type();
-        }
-
-        return UNKNOWN;
-    }
-
-    bool unknownArithmetic() {
-        if (TokenUtils::isArithmetic(peek())) {
-            while (TokenUtils::isArithmetic(peek())) {
-                advance();
-            }
-            addToken(UNKNOWN);
-            return true;
-        }
-        return false;
+        auto token = m_tokens[m_tokens.size() - 1 - back];
+        return token->type();
     }
 
     void handleDouble(char expected, TokenType type) {
@@ -176,42 +129,33 @@ private:
         }
     }
 
-    void handlePlus() {
+    void
+    handleSignedOp(char symbol, TokenType binary, TokenType unary, TokenType post, TokenType pre, TokenType assign) {
         if (match('=')) {
-            addToken(ADD_ASS_OP);
-            pushOp(m_assOps);
+            addToken(assign);
+            m_validator.pushAssignmentOp();
             return;
         }
 
-        TokenType type = UNKNOWN;
+        TokenType prev = lastToken();
 
-        if (match('+')) {
-            addToken(TokenUtils::isIdentifier(lastToken()) ? POST_INCRMNT_OP : PRE_INCRMNT_OP);
-            pushOp(m_dUnaryOps);
+        if (match(symbol)) {
+            addToken(TokenUtils::isIdentifier(prev) ? post : pre);
+            m_validator.pushDoubleUnaryOp();
+            return;
         }
-        else {
-            addToken((TokenUtils::isValue(lastToken()) || lastToken() == STR_LITERAL) ? ADD_OP : POSITIVE_OP);
-            lastToken() == ADD_OP ? pushOp(m_binaryOps) : pushOp(m_sUnaryOps);
-        }
+
+        bool isBinary = TokenUtils::isValue(prev) || prev == STR_LITERAL;
+        addToken(isBinary ? binary : unary);
+        isBinary ? m_validator.pushBinaryOp() : m_validator.pushSingleUnaryOp();
+    }
+
+    void handlePlus() {
+        handleSignedOp('+', ADD_OP, POSITIVE_OP, POST_INCRMNT_OP, PRE_INCRMNT_OP, ADD_ASS_OP);
     }
 
     void handleMinus() {
-        if (match('=')) {
-            addToken(SUBTRCT_ASS_OP);
-            pushOp(m_assOps);
-            return;
-        }
-
-        TokenType type;
-
-        if (match('-')) {
-            addToken(TokenUtils::isIdentifier(lastToken()) ? POST_DECRMNT_OP : PRE_DECRMNT_OP);
-            pushOp(m_dUnaryOps);
-        }
-        else {
-            addToken(TokenUtils::isValue(lastToken()) ? SUBTRACT_OP : NEGATIVE_OP);
-            lastToken() == SUBTRACT_OP ? pushOp(m_binaryOps) : pushOp(m_sUnaryOps);
-        }
+        handleSignedOp('-', SUBTRACT_OP, NEGATIVE_OP, POST_DECRMNT_OP, PRE_DECRMNT_OP, SUBTRCT_ASS_OP);
     }
 
     void handleWhitespace(char c) {
@@ -231,24 +175,24 @@ private:
         }
         else {
             addToken(match('=') ? DIVIDE_ASS_OP : DIVIDE_OP);
-            lastToken() == DIVIDE_ASS_OP ? pushOp(m_assOps) : pushOp(m_binaryOps);
+            lastToken() == DIVIDE_ASS_OP ? m_validator.pushAssignmentOp() : m_validator.pushBinaryOp();
         }
     }
 
     void handleAsterisk() {
         addToken(match('=') ? MULTPLY_ASS_OP : MULTIPLY_OP);
-        lastToken() == MULTPLY_ASS_OP ? pushOp(m_assOps) : pushOp(m_binaryOps);
+        lastToken() == MULTPLY_ASS_OP ? m_validator.pushAssignmentOp() : m_validator.pushBinaryOp();
     }
 
     void singleLineComment() {
-        for (char p = peek(); p != '\n' && p != '\0'; p = peek()) {
+        while (peek() != '\n' && peek() != '\0') {
             advance();
         }
         addToken(LINE_COMNT);
     }
 
     void multiLineComment() {
-        uint32_t currentLine = m_line;
+        size_t currentLine = m_line;
         while (!(peek() == '*' && peekNext() == '/') && !isAtEnd()) {
             if (peek() == '\n') {
                 ++m_line;
@@ -263,46 +207,21 @@ private:
         addToken(MULTILINE_COMNT, currentLine);
     }
 
-    void pushOp(Indices &stack) {
-        stack.push(m_tokens.size() - 1);
-    }
-
-    void checkOps(Indices &stack, const std::function<bool(TokenType first, TokenType last)> &condition) {
-        auto getToken = [&](int32_t index) {
-            return std::dynamic_pointer_cast<DefToken>(m_tokens[index]);
-        };
-
-        while (!stack.empty()) {
-            int32_t index = stack.top();
-            auto current = getToken(index);
-
-            if (index - 1 < 0 || index + 1 >= m_tokens.size()) {
-                current->setType(UNKNOWN);
-                stack.pop();
-                continue;
-            }
-
-            auto first = getToken(index - 1);
-            auto last = getToken(index + 1);
-
-            if (!first || !last) {
-                current->setType(UNKNOWN);
-                stack.pop();
-                continue;
-            }
-
-            if (!condition(first->type(), last->type())) {
-                current->setType(UNKNOWN);
-            }
-            stack.pop();
-        }
-    }
-
     bool userDefIdentifier() {
         if (m_tokens.empty()) {
             return false;
         }
         return m_userDefinedTokens.find(m_tokens.back()->lexeme()) != m_userDefinedTokens.end() ||
                lastToken() == MAC_STATE_RESW;
+    }
+
+    bool validIdentifier() {
+        const auto t0 = lastToken();
+        const auto t1 = lastToken(1);
+        const auto t2 = lastToken(2);
+        const auto t3 = lastToken(3);
+
+        return (t1 == IDENTIFIER || (t3 == IDENTIFIER && t2 == EQUAL_ASS_OP && TokenUtils::isValue(t1))) &&
+               t0 == COMMA_OP;
     }
 };

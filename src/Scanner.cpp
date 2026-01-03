@@ -90,7 +90,7 @@ void Scanner::scanToken() {
 }
 
 void Scanner::string() {
-    for (char p = peek(); p != '"' && p != '\0'; p = peek()) {
+    while (peek() != '"' && peek() != '\0') {
         advance();
     }
 
@@ -124,17 +124,22 @@ void Scanner::word() {
 
     std::string text = TokenUtils::substring(m_start, m_current, m_source);
 
-    // Check for special Words, User defined types, and identifiers
-    if (specialWords.find(text) != specialWords.end()) {
+    const auto prevToken = lastToken();
+
+    const bool isSpecialWord = specialWords.contains(text);
+
+    const bool isUserDefinedType = TokenUtils::isUserType(prevToken) || m_userDefinedTokens.contains(text);
+
+    const bool isIdentifier = TokenUtils::isPrimitiveType(prevToken) || userDefIdentifier() ||
+                              m_idsDefined.contains(text) || validIdentifier();
+
+    if (isSpecialWord) {
         addToken(specialWords.at(text));
     }
-    else if (TokenUtils::isUserType(lastToken()) || m_userDefinedTokens.find(text) != m_userDefinedTokens.end()) {
+    else if (isUserDefinedType) {
         addUserDefinedToken();
     }
-    else if (TokenUtils::isPrimitiveType(lastToken()) ||
-             userDefIdentifier() || // check if the identifier has user defined type
-             m_idsDefined.find(text) != m_idsDefined.end()) {
-
+    else if (isIdentifier) {
         addIdentifier();
     }
     else {
