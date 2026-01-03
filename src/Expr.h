@@ -8,7 +8,7 @@ class LiteralExpr;
 class UnaryExpr;
 class Visitor;
 
-class Expr: public std::enable_shared_from_this<Expr> {
+class Expr{
 public:
     virtual std::string accept(Visitor& visitor) = 0;
     virtual ~Expr() = default;
@@ -16,10 +16,10 @@ public:
 
 class Visitor {
 public:
-    virtual std::string visitBinaryExpr(Ref<BinaryExpr> expr) = 0;
-    virtual std::string visitGroupingExpr(Ref<GroupingExpr> expr) = 0;
-    virtual std::string visitLiteralExpr(Ref<LiteralExpr> expr) = 0;
-    virtual std::string visitUnaryExpr(Ref<UnaryExpr> expr) = 0;
+    virtual std::string visitBinaryExpr(const BinaryExpr& expr) = 0;
+    virtual std::string visitGroupingExpr(const GroupingExpr& expr) = 0;
+    virtual std::string visitLiteralExpr(const LiteralExpr& expr) = 0;
+    virtual std::string visitUnaryExpr(const UnaryExpr& expr) = 0;
     virtual ~Visitor() = default;
 };
 
@@ -29,7 +29,7 @@ public:
     : left(left), op(op), right(right) {}
 
     std::string accept(Visitor& visitor) override {
-        return visitor.visitBinaryExpr(StaticCast<BinaryExpr>(shared_from_this()));
+        return visitor.visitBinaryExpr(*this);
     }
 
     const Ref<Expr> left;
@@ -43,7 +43,7 @@ public:
     : expression(expression) {}
 
     std::string accept(Visitor& visitor) override {
-        return visitor.visitGroupingExpr(StaticCast<GroupingExpr>(shared_from_this()));
+        return visitor.visitGroupingExpr(*this);
     }
 
     const Ref<Expr> expression;
@@ -55,7 +55,7 @@ public:
     : value(value) {}
 
     std::string accept(Visitor& visitor) override {
-        return visitor.visitLiteralExpr(StaticCast<LiteralExpr>(shared_from_this()));
+        return visitor.visitLiteralExpr(*this);
     }
 
     const Ref<std::string> value;
@@ -67,7 +67,7 @@ public:
     : op(op), right(right) {}
 
     std::string accept(Visitor& visitor) override {
-        return visitor.visitUnaryExpr(StaticCast<UnaryExpr>(shared_from_this()));
+        return visitor.visitUnaryExpr(*this);
     }
 
     const Ref<Token> op;

@@ -75,8 +75,7 @@ void defineType(std::ofstream &file, StrRef baseName, StrRef className, StrRef f
     file << " {}\n\n";
 
     file << "    std::string accept(Visitor& visitor) override {\n";
-    file << "        return visitor.visit" << className << baseName << "(StaticCast<";
-    file << className << baseName << ">(shared_from_this()));\n";
+    file << "        return visitor.visit" << className << baseName << "(*this);\n";
     file << "    }\n\n";
 
     for (auto field: fields) {
@@ -102,7 +101,7 @@ void defineVisitor(std::ofstream &file, StrRef baseName, const std::vector<Str> 
         });
 
         file << "    virtual std::string visit" << typeName << baseName << "(";
-        file << "Ref<" << typeName << baseName << "> " << lowerBaseName << ") = 0;\n";
+        file << "const " << typeName << baseName << "& " << lowerBaseName << ") = 0;\n";
     }
 
     file << "    virtual ~Visitor() = default;\n";
@@ -125,7 +124,7 @@ void defineAst(StrRef outputDir, StrRef baseName, const std::vector<Str> &types)
     }
     file << "class Visitor;\n\n";
 
-    file << "class " << baseName << ": public std::enable_shared_from_this<" << baseName << "> {\n";
+    file << "class " << baseName << "{\n";
     file << "public:\n";
     file << "    virtual std::string accept(Visitor& visitor) = 0;\n";
     file << "    virtual ~" << baseName << "() = default;\n";

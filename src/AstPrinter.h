@@ -7,20 +7,20 @@ public:
         return expr->accept(*this);
     }
 
-    std::string visitBinaryExpr(Ref<BinaryExpr> expr) override {
-        return parenthesize(expr->op->lexeme(), expr->left, expr->right);
+    std::string visitBinaryExpr(const BinaryExpr &expr) override {
+        return parenthesize(expr.op->lexeme(), expr.left, expr.right);
     }
 
-    std::string visitGroupingExpr(Ref<GroupingExpr> expr) override {
-        return parenthesize("()", expr->expression);
+    std::string visitGroupingExpr(const GroupingExpr &expr) override {
+        return parenthesize("()", expr.expression);
     }
 
-    std::string visitLiteralExpr(Ref<LiteralExpr> expr) override {
-        return *expr->value;
+    std::string visitLiteralExpr(const LiteralExpr &expr) override {
+        return *expr.value;
     }
 
-    std::string visitUnaryExpr(Ref<UnaryExpr> expr) override {
-        return parenthesize(expr->op->lexeme(), expr->right);
+    std::string visitUnaryExpr(const UnaryExpr &expr) override {
+        return parenthesize(expr.op->lexeme(), expr.right);
     }
 
 private:
