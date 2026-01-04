@@ -22,7 +22,7 @@ public:
         return m_tokens;
     }
 
-    void output() {
+    ordered_json output() {
         size_t currentLine = 0;
         ordered_json out;
 
@@ -33,13 +33,12 @@ public:
 
             out[std::to_string(currentLine)].push_back(
                 {
-                    {  "token",  elem->token() },
+                    {  "token",   elem->type() },
                     { "lexeme", elem->lexeme() }
             }
             );
         }
-
-        std::cout << out.dump(4);
+        return out;
     }
 
 private:

@@ -11,15 +11,17 @@ int main(int argc, char *argv[]) {
     std::string input = readFromInput(std::cin);
     Scanner scanner(input);
     const TokenVec &tokens = scanner.scanTokens();
-    scanner.output();
     std::cout << "\n\n";
 
     Parser parser(tokens);
-    Ref<Expr> expression = parser.parse();
 
     if (hadError()) {
         exit(-1);
     }
 
-    std::cout << MakeRef<AstPrinter>()->print(expression);
+    ordered_json out;
+    out["lexical"] = scanner.output();
+    out["syntactical"] = parser.parse()->cst->toJson();
+
+    std::cout << out.dump(4); // remove yung padding para mas mabilis yung parsing
 }

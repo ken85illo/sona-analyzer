@@ -2,6 +2,7 @@
 
 #include "Error.h"
 #include "Expr.h"
+#include "ParseResult.h"
 #include "Token.h"
 
 class Parser {
@@ -13,7 +14,7 @@ public:
     Parser(const TokenVec &tokens)
     : m_tokens(tokens) {}
 
-    Ref<Expr> parse() {
+    Ref<ParseResult> parse() {
         try {
             return expression();
         }
@@ -26,89 +27,138 @@ private:
     const TokenVec &m_tokens;
     size_t current = 0;
 
-    Ref<Expr> expression() {
+    /* ================= Grammar ================= */
+
+    Ref<ParseResult> expression() {
         return equality();
     }
 
-    Ref<Expr> equality() {
-        Ref<Expr> expr = comparison();
+    Ref<ParseResult> equality() {
+        auto node = MakeRef<NonTerminalNode>("equality");
+
+        auto left = comparison();
+        node->children.push_back(left->cst);
 
         while (match(NOT_EQUAL_REL_OP, EQUAL_REL_OP)) {
             Ref<Token> op = previous();
-            Ref<Expr> right = comparison();
-            expr = MakeRef<BinaryExpr>(expr, op, right);
+            validateToken(op);
+            auto right = comparison();
+
+            node->children.push_back(MakeRef<TerminalNode>(op));
+            node->children.push_back(right->cst);
+
+            left->ast = MakeRef<BinaryExpr>(left->ast, op, right->ast);
         }
-        return expr;
+        return MakeRef<ParseResult>(left->ast, node);
     }
 
-    Ref<Expr> comparison() {
-        Ref<Expr> expr = term();
+    Ref<ParseResult> comparison() {
+        auto node = MakeRef<NonTerminalNode>("comparison");
+
+        auto left = term();
+        node->children.push_back(left->cst);
 
         while (match(GREATER_REL_OP, GREATER_EQUAL_REL_OP, LESS_REL_OP, LESS_EQUAL_REL_OP)) {
             Ref<Token> op = previous();
-            Ref<Expr> right = term();
-            expr = MakeRef<BinaryExpr>(expr, op, right);
-        }
+            validateToken(op);
+            auto right = term();
 
-        return expr;
+            node->children.push_back(MakeRef<TerminalNode>(op));
+            node->children.push_back(right->cst);
+
+            left->ast = MakeRef<BinaryExpr>(left->ast, op, right->ast);
+        }
+        return MakeRef<ParseResult>(left->ast, node);
     }
 
-    Ref<Expr> term() {
-        Ref<Expr> expr = factor();
+    Ref<ParseResult> term() {
+        auto node = MakeRef<NonTerminalNode>("term");
+
+        auto left = factor();
+        node->children.push_back(left->cst);
 
         while (match(SUBTRACT_OP, ADD_OP)) {
             Ref<Token> op = previous();
-            Ref<Expr> right = factor();
+            validateToken(op);
+            auto right = factor();
 
-            expr = MakeRef<BinaryExpr>(expr, op, right);
+            node->children.push_back(MakeRef<TerminalNode>(op));
+            node->children.push_back(right->cst);
+
+            left->ast = MakeRef<BinaryExpr>(left->ast, op, right->ast);
         }
-
-        return expr;
+        return MakeRef<ParseResult>(left->ast, node);
     }
 
-    Ref<Expr> factor() {
-        Ref<Expr> expr = unary();
+    Ref<ParseResult> factor() {
+        auto node = MakeRef<NonTerminalNode>("factor");
+
+        auto left = unary();
+        node->children.push_back(left->cst);
 
         while (match(DIVIDE_OP, MULTIPLY_OP)) {
             Ref<Token> op = previous();
-            Ref<Expr> right = unary();
-            expr = MakeRef<BinaryExpr>(expr, op, right);
-        }
+            validateToken(op);
+            auto right = unary();
 
-        return expr;
+            node->children.push_back(MakeRef<TerminalNode>(op));
+            node->children.push_back(right->cst);
+
+            left->ast = MakeRef<BinaryExpr>(left->ast, op, right->ast);
+        }
+        return MakeRef<ParseResult>(left->ast, node);
     }
 
-    Ref<Expr> unary() {
+    Ref<ParseResult> unary() {
+        auto node = MakeRef<NonTerminalNode>("unary");
+
         if (match(NOT_LOG_OP, NEGATIVE_OP, POSITIVE_OP)) {
             Ref<Token> op = previous();
-            Ref<Expr> right = unary();
-            return MakeRef<UnaryExpr>(op, right);
+            validateToken(op);
+
+            auto right = unary();
+            return MakeRef<ParseResult>(MakeRef<UnaryExpr>(op, right->ast), node);
         }
 
         return primary();
     }
 
-    Ref<Expr> primary() {
+    Ref<ParseResult> primary() {
+        auto node = MakeRef<NonTerminalNode>("primary");
+        auto token = peek();
+
         if (match(FALSE_LITERAL)) {
-            return MakeRef<LiteralExpr>(MakeRef<std::string>("false"));
+            node->children.push_back(MakeRef<TerminalNode>(token));
+            return MakeRef<ParseResult>(MakeRef<LiteralExpr>(token), node);
         }
 
         if (match(TRUE_LITERAL)) {
-            return MakeRef<LiteralExpr>(MakeRef<std::string>("true"));
+            node->children.push_back(MakeRef<TerminalNode>(token));
+            return MakeRef<ParseResult>(MakeRef<LiteralExpr>(token), node);
         }
 
         if (match(INT_LITERAL, FLT_LITERAL, STR_LITERAL)) {
-            return MakeRef<LiteralExpr>(MakeRef<std::string>(previous()->lexeme()));
+            node->children.push_back(MakeRef<TerminalNode>(token));
+            return MakeRef<ParseResult>(MakeRef<LiteralExpr>(token), node);
         }
 
         if (match(LEFT_PAREN_DELIM)) {
-            Ref<Expr> expr = expression();
+            node->children.push_back(MakeRef<TerminalNode>(token));
+
+            auto expr = expression();
+            node->children.push_back(expr->cst);
+
             consume(RIGHT_PAREN_DELIM, "Expect ')' after expression.");
-            return MakeRef<GroupingExpr>(expr);
+            node->children.push_back(MakeRef<TerminalNode>(previous()));
+
+            return MakeRef<ParseResult>(MakeRef<GroupingExpr>(expr->ast), node);
         }
 
+        validateToken(peek());
         throw error(peek(), "Expect expression.");
     }
+
+    /* ================= Helpers ================= */
 
     Ref<Token> consume(TokenType type, const std::string &message) {
         if (check(type)) {
@@ -125,11 +175,7 @@ private:
 
     template <typename... TokenType>
     bool match(TokenType... types) {
-        return (tryMatch(types) || ...);
-    }
-
-    bool tryMatch(TokenType type) {
-        if (check(type)) {
+        if ((check(types) || ...)) {
             advance();
             return true;
         }
@@ -160,6 +206,12 @@ private:
 
     Ref<Token> previous() {
         return m_tokens[current - 1];
+    }
+
+    void validateToken(Ref<Token> token) {
+        if (token->type() == UNKNOWN) {
+            throw error(peek(), "Lexer defined this as UNKNOWN token!");
+        }
     }
 
     void synchronize() {

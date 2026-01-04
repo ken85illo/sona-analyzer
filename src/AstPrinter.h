@@ -16,7 +16,7 @@ public:
     }
 
     std::string visitLiteralExpr(const LiteralExpr &expr) override {
-        return *expr.value;
+        return expr.value->lexeme();
     }
 
     std::string visitUnaryExpr(const UnaryExpr &expr) override {
