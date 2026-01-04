@@ -10,18 +10,19 @@ std::string readFromInput(std::istream &source) {
 int main(int argc, char *argv[]) {
     std::string input = readFromInput(std::cin);
     Scanner scanner(input);
+
     const TokenVec &tokens = scanner.scanTokens();
-    std::cout << "\n\n";
-
     Parser parser(tokens);
+    auto parseOut = parser.parse();
 
-    if (hadError()) {
-        exit(-1);
-    }
+    // if (hadError()) {
+    //     exit(-1);
+    // }
 
     ordered_json out;
     out["lexical"] = scanner.output();
-    out["syntactical"] = parser.parse()->cst->toJson();
+    out["syntactical"] = (!parseOut) ? ordered_json() : parseOut->cst->toJson();
+    out["errors"] = errorJson();
 
-    std::cout << out.dump(4); // remove yung padding para mas mabilis yung parsing
+    std::cout << out.dump(); // remove yung padding para mas mabilis yung parsing
 }

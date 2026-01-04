@@ -4,9 +4,12 @@
 #include "Token.h"
 
 static bool hasError = false;
+static ordered_json errors;
 
 static void report(size_t line, const std::string &where, const std::string &message) {
-    std::cerr << "[line " << line << "] Error" << where << ": " << message;
+    std::stringstream ss;
+    ss << "[line " << line << "] Error" << where << ": " << message;
+    errors[std::to_string(line)] = ss.str();
 }
 
 inline void error(Ref<Token> token, const std::string &message) {
@@ -19,4 +22,8 @@ inline void error(Ref<Token> token, const std::string &message) {
 
 inline bool hadError() {
     return hasError;
+}
+
+inline ordered_json errorJson() {
+    return errors;
 }

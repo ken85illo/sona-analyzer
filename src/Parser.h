@@ -127,6 +127,8 @@ private:
         auto node = MakeRef<NonTerminalNode>("primary");
         auto token = peek();
 
+        validateToken(token);
+
         if (match(FALSE_LITERAL)) {
             node->children.push_back(MakeRef<TerminalNode>(token));
             return MakeRef<ParseResult>(MakeRef<LiteralExpr>(token), node);
@@ -137,7 +139,7 @@ private:
             return MakeRef<ParseResult>(MakeRef<LiteralExpr>(token), node);
         }
 
-        if (match(INT_LITERAL, FLT_LITERAL, STR_LITERAL)) {
+        if (match(INT_LITERAL, FLT_LITERAL)) {
             node->children.push_back(MakeRef<TerminalNode>(token));
             return MakeRef<ParseResult>(MakeRef<LiteralExpr>(token), node);
         }
@@ -154,7 +156,6 @@ private:
             return MakeRef<ParseResult>(MakeRef<GroupingExpr>(expr->ast), node);
         }
 
-        validateToken(peek());
         throw error(peek(), "Expect expression.");
     }
 

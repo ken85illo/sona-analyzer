@@ -33,8 +33,8 @@ public:
 
             out[std::to_string(currentLine)].push_back(
                 {
-                    {  "token",   elem->type() },
-                    { "lexeme", elem->lexeme() }
+                    {  "token", elem->typeString() },
+                    { "lexeme",     elem->lexeme() }
             }
             );
         }
