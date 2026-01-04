@@ -19,7 +19,7 @@ inline bool isAlphaNumeric(char c) {
 inline bool isValue(TokenType type) {
     return type == IDENTIFIER || type == INT_LITERAL || type == FLT_LITERAL || type == POST_INCRMNT_OP ||
            type == POST_DECRMNT_OP || type == PRE_DECRMNT_OP || type == POST_DECRMNT_OP || type == STR_LITERAL ||
-           type == POSITIVE_OP || type == NEGATIVE_OP;
+           type == POSITIVE_OP || type == NEGATIVE_OP || type == LEFT_PAREN_DELIM || type == RIGHT_PAREN_DELIM;
 }
 
 inline bool isUserType(TokenType type) {

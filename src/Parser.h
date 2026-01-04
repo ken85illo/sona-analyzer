@@ -30,7 +30,12 @@ private:
     /* ================= Grammar ================= */
 
     Ref<ParseResult> expression() {
-        return equality();
+        auto node = MakeRef<NonTerminalNode>("expression");
+
+        auto left = equality();
+        node->children.push_back(left->cst);
+
+        return MakeRef<ParseResult>(left->ast, node);
     }
 
     Ref<ParseResult> equality() {
@@ -117,6 +122,10 @@ private:
             validateToken(op);
 
             auto right = unary();
+
+            node->children.push_back(MakeRef<TerminalNode>(op));
+            node->children.push_back(right->cst);
+
             return MakeRef<ParseResult>(MakeRef<UnaryExpr>(op, right->ast), node);
         }
 
@@ -129,17 +138,7 @@ private:
 
         validateToken(token);
 
-        if (match(FALSE_LITERAL)) {
-            node->children.push_back(MakeRef<TerminalNode>(token));
-            return MakeRef<ParseResult>(MakeRef<LiteralExpr>(token), node);
-        }
-
-        if (match(TRUE_LITERAL)) {
-            node->children.push_back(MakeRef<TerminalNode>(token));
-            return MakeRef<ParseResult>(MakeRef<LiteralExpr>(token), node);
-        }
-
-        if (match(INT_LITERAL, FLT_LITERAL)) {
+        if (match(INT_LITERAL, FLT_LITERAL, TRUE_LITERAL, FALSE_LITERAL, STR_LITERAL)) {
             node->children.push_back(MakeRef<TerminalNode>(token));
             return MakeRef<ParseResult>(MakeRef<LiteralExpr>(token), node);
         }
@@ -156,7 +155,10 @@ private:
             return MakeRef<ParseResult>(MakeRef<GroupingExpr>(expr->ast), node);
         }
 
-        throw error(peek(), "Expect expression.");
+        throw error(
+            peek(),
+            "[SYNTAX] Expect STR_LITERAL, INT_LITERAL, FLT_LITERAL, FALSE_LITERAL, or TRUE_LITERAL in expression."
+        );
     }
 
     /* ================= Helpers ================= */
@@ -211,7 +213,7 @@ private:
 
     void validateToken(Ref<Token> token) {
         if (token->type() == UNKNOWN) {
-            throw error(peek(), "Lexer defined this as UNKNOWN token!");
+            throw error(peek(), "[LEXICAL] Identified this as UNKNOWN token!");
         }
     }
 

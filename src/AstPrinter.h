@@ -1,7 +1,7 @@
 #pragma once
 #include "Expr.h"
 
-class AstPrinter : public Visitor {
+class AstPrinter : public ExprVisitor {
 public:
     std::string print(Ref<Expr> expr) {
         return expr->accept(*this);

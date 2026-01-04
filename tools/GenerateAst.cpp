@@ -74,7 +74,7 @@ void defineType(std::ofstream &file, StrRef baseName, StrRef className, StrRef f
     }
     file << " {}\n\n";
 
-    file << "    std::string accept(Visitor& visitor) override {\n";
+    file << "    std::string accept(" << baseName << "Visitor& visitor) override {\n";
     file << "        return visitor.visit" << className << baseName << "(*this);\n";
     file << "    }\n\n";
 
@@ -90,7 +90,7 @@ void defineType(std::ofstream &file, StrRef baseName, StrRef className, StrRef f
 }
 
 void defineVisitor(std::ofstream &file, StrRef baseName, const std::vector<Str> &types) {
-    file << "class Visitor {\n";
+    file << "class " << baseName << "Visitor {\n";
     file << "public:\n";
 
     for (auto type: types) {
@@ -104,7 +104,7 @@ void defineVisitor(std::ofstream &file, StrRef baseName, const std::vector<Str> 
         file << "const " << typeName << baseName << "& " << lowerBaseName << ") = 0;\n";
     }
 
-    file << "    virtual ~Visitor() = default;\n";
+    file << "    virtual ~" << baseName << "Visitor() = default;\n";
     file << "};\n\n";
 }
 
@@ -122,11 +122,11 @@ void defineAst(StrRef outputDir, StrRef baseName, const std::vector<Str> &types)
         auto typeName = trim(split(type, '=')[0]);
         file << "class " << typeName << baseName << ";\n";
     }
-    file << "class Visitor;\n\n";
+    file << "class " << baseName << "Visitor;\n\n";
 
     file << "class " << baseName << "{\n";
     file << "public:\n";
-    file << "    virtual std::string accept(Visitor& visitor) = 0;\n";
+    file << "    virtual std::string accept(" << baseName << "Visitor& visitor) = 0;\n";
     file << "    virtual ~" << baseName << "() = default;\n";
     file << "};\n\n";
 
@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
     Str outputDir = argv[1];
 
     std::vector<Str> strList;
-    std::ifstream file("grammar.txt");
+    std::ifstream file("grammar_stmt.txt");
     Str str;
 
     Str baseName;
