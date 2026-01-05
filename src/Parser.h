@@ -35,7 +35,7 @@ private:
         try {
             auto node = NonTerminalNode::make("_STATEMENTS");
             node->add(assStmnt());
-            auto sc = consume(SEMICOLON_DELIM, "Assignment statement must end in semicolon");
+            auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after.");
             node->add(TerminalNode::make(sc));
 
             return node;
@@ -48,12 +48,17 @@ private:
 
     // Naming Identifiers
     CST id() {
-        auto node = NonTerminalNode::make("ID");
-        auto ident = consume(IDENTIFIER, "Expected an identifier");
-        node->add(TerminalNode::make(ident));
-        return node;
+        if (auto ident = match(IDENTIFIER)) {
+            auto node = NonTerminalNode::make("ID");
+            node->add(TerminalNode::make(ident));
+            return node;
+        }
+        return nullptr;
     }
 
+    // [[ DECLARATION PRODUCTION RULE ]]
+
+    // [[ ASSIGNMENT PRODUCTION RULE ]]
     // Basic Assignment Structure
     CST assStmnt() {
         if (auto list = assList()) {
@@ -80,7 +85,12 @@ private:
         if (auto op = operandList()) {
             auto node = NonTerminalNode::make("ASS_SINGLE");
             node->add(op);
-            node->add(assTail());
+            if (auto at = assTail()) {
+                node->add(at);
+            }
+            else {
+                throw error(previous(), "Expected an assignment operator after variable.");
+            }
             return node;
         }
         else if (auto op = unaryAssOp()) {
@@ -95,13 +105,14 @@ private:
     CST assTail() {
         if (auto op = assOp()) {
             auto node = NonTerminalNode::make("ASS_TAIL");
-            node->add(assOp());
+            node->add(op);
+
             node->add(expression());
             return node;
         }
         else if (auto op = unaryAssOp()) {
             auto node = NonTerminalNode::make("ASS_TAIL");
-            node->add(unaryAssOp());
+            node->add(op);
             return node;
         }
         return nullptr;
@@ -174,7 +185,8 @@ private:
             node->add(TerminalNode::make(rightParen));
             return node;
         }
-        throw error(peek(), "Expect NUMBER, REAL_NUMBER, or BOOL literals inside expression");
+
+        throw error(peek(), "Expected an expression.");
     }
 
     // Operators
@@ -236,17 +248,17 @@ private:
 
     // Expression operands
     CST operand() {
-        if (auto nt = number()) {
+        if (auto nt = operandLiteral()) {
             auto node = NonTerminalNode::make("OPERAND");
             node->add(nt);
             return node;
         }
-        else if (auto nt = realNum()) {
+        else if (auto nt = unaryStmnt()) {
             auto node = NonTerminalNode::make("OPERAND");
             node->add(nt);
             return node;
         }
-        else if (auto nt = boolG()) {
+        else if (auto nt = assSingle()) {
             auto node = NonTerminalNode::make("OPERAND");
             node->add(nt);
             return node;
@@ -256,39 +268,95 @@ private:
 
     // Variable operand cases
     CST unaryStmnt() {
-        if (auto stmt = unaryAssStmt()) {
-            auto node = NonTerminalNode::make("UNARY_STMNT");
-            node->add(stmt);
-            return node;
-        }
-        else if (auto stmt = operand()) {
-            auto node = NonTerminalNode::make("UNARY_STMNT");
-            node->add(stmt);
-            return node;
-        }
-        return nullptr;
-    }
-
-    CST unaryAssStmt() {
         if (auto op = unaryAssOp()) {
-            auto node = NonTerminalNode::make("UNARY_ASS_STMT");
+            auto node = NonTerminalNode::make("UNARY_STMNT");
             node->add(op);
             node->add(operandList());
             return node;
         }
         else if (auto op = operandList()) {
-            auto node = NonTerminalNode::make("UNARY_ASS_STMT");
+            auto node = NonTerminalNode::make("UNARY_STMNT");
             node->add(op);
-            node->add(unaryAssOp());
+            node->add(operandSuffix());
+            return node;
+        }
+        else if (auto op = match(NOT_LOG_OP)) {
+            auto node = NonTerminalNode::make("UNARY_STMNT");
+            node->add(TerminalNode::make(op));
+            node->add(operandLiteral());
+            return node;
+        }
+        return nullptr;
+    }
+
+    CST operandSuffix() {
+        if (auto op = unaryAssOp()) {
+            auto node = NonTerminalNode::make("OPERAND_SUFFIX");
+            node->add(op);
+            return node;
+        }
+        return nullptr;
+    }
+
+    CST operandLiteral() {
+        if (auto nt = number()) {
+            auto node = NonTerminalNode::make("OPERAND_LITERAL");
+            node->add(nt);
+            return node;
+        }
+        else if (auto nt = realNum()) {
+            auto node = NonTerminalNode::make("OPERAND_LITERAL");
+            node->add(nt);
+            return node;
+        }
+        else if (auto nt = boolG()) {
+            auto node = NonTerminalNode::make("OPERAND_LITERAL");
+            node->add(nt);
             return node;
         }
         return nullptr;
     }
 
     CST operandList() {
-        auto node = NonTerminalNode::make("OPERAND_LIST");
-        node->add(id());
-        return node;
+        if (auto ident = id()) {
+            auto node = NonTerminalNode::make("OPERAND_LIST");
+            node->add(ident);
+            node->add(idSuffix());
+            return node;
+        }
+
+        return nullptr;
+    }
+
+    CST idSuffix() {
+        if (auto leftSquare = match(LEFT_SQUARE_DELIM)) {
+            auto node = NonTerminalNode::make("ID_SUFFIX");
+            node->add(TerminalNode::make(leftSquare));
+            node->add(expression());
+            auto rightSquare = consume(RIGHT_SQUARE_DELIM, "Expected ']' after expression");
+            node->add(TerminalNode::make(rightSquare));
+            return node;
+        }
+        return nullptr;
+    }
+
+    // Data types
+    CST dt() {
+        if (auto dataType = match(
+                INT_TYPE_RESW, CHAR_TYPE_RESW, STRING_TYPE_RESW, FLOAT_TYPE_RESW, DOUBLE_TYPE_RESW, VOID_TYPE_RESW
+            )) {
+            auto node = NonTerminalNode::make("DT");
+            node->add(TerminalNode::make(dataType));
+            return node;
+        }
+        else if (auto mod = match(UNSIGNED_RESW)) {
+            if (auto dataType = match(INT_TYPE_RESW)) {
+                auto node = NonTerminalNode::make("DT");
+                node->add(TerminalNode::make(dataType));
+                return node;
+            }
+        }
+        return nullptr;
     }
 
     // Constructing Numbers
@@ -304,7 +372,7 @@ private:
             auto node = NonTerminalNode::make("NUMBER");
 
             node->add(TerminalNode::make(op));
-            auto operand = consume(INT_LITERAL, "Expect a number after POSITIVE_OP");
+            auto operand = consume(INT_LITERAL, "Expect an expression after POSITIVE_OP");
             node->add(TerminalNode::make(operand));
             return node;
         }
@@ -312,7 +380,7 @@ private:
             auto node = NonTerminalNode::make("NUMBER");
 
             node->add(TerminalNode::make(op));
-            auto operand = consume(INT_LITERAL, "Expect a number after NEGATIVE_OP");
+            auto operand = consume(INT_LITERAL, "Expect an expression after NEGATIVE_OP");
             node->add(TerminalNode::make(operand));
             return node;
         }
@@ -330,7 +398,7 @@ private:
             auto node = NonTerminalNode::make("REAL_NUM");
 
             node->add(TerminalNode::make(op));
-            auto operand = consume(FLT_LITERAL, "Expect a number after POSITIVE_OP");
+            auto operand = consume(FLT_LITERAL, "Expect an expression after POSITIVE_OP");
             node->add(TerminalNode::make(operand));
             return node;
         }
@@ -338,7 +406,7 @@ private:
             auto node = NonTerminalNode::make("REAL_NUM");
 
             node->add(TerminalNode::make(op));
-            auto operand = consume(FLT_LITERAL, "Expect a number after NEGATIVE_OP");
+            auto operand = consume(FLT_LITERAL, "Expect an expression after NEGATIVE_OP");
             node->add(TerminalNode::make(operand));
             return node;
         }
@@ -376,8 +444,9 @@ private:
         throw error(peek(), message);
     }
 
-    ParseError error(Ref<Token> token, const std::string &message) {
-        ::error(token, message);
+    ParseError
+    error(Ref<Token> token, const std::string &message, std::optional<std::string> tokenString = std::nullopt) {
+        ::error(token, message, tokenString);
         synchronize();
         return ParseError("");
     }
@@ -412,10 +481,18 @@ private:
     }
 
     Ref<Token> peek() {
+        if (isAtEnd()) {
+            return previous();
+        }
+
         return m_tokens[current];
     }
 
     Ref<Token> previous() {
+        if (current - 1 < 0) {
+            return m_tokens[0];
+        }
+
         return m_tokens[current - 1];
     }
 
@@ -426,42 +503,66 @@ private:
 
         // Handle lexical unknown tokens
         if (token->lexeme() == "++") {
-            throw error(token, "Invalid use of INCREMENT_OP");
+            throw error(
+                token, "Invalid use of increment operator (it should be with a defined identifier).", "INCREMNT_OP"
+            );
         }
-        else if (token->lexeme() == "--") {
-            throw error(token, "Invalid use of DECREMENT_OP");
+        if (token->lexeme() == "--") {
+            throw error(
+                token, "Invalid use of decrement operator (it should be with a defined identifier).", "DECREMNT_OP"
+            );
         }
-        else if (token->lexeme() == "-") {
-            throw error(token, "Invalid use of NEGATIVE_OP or SUBTRACT_OP");
+        if (token->lexeme() == "-") {
+            throw error(token, "Invalid use of negation or subtract(binary) operator.", "MINUS_OP");
         }
-        else if (token->lexeme() == "+") {
-            throw error(token, "Invalid use of POSITIVE_OP or ADD_OP");
+        if (token->lexeme() == "+") {
+            throw error(token, "Invalid use of positive or addition(binary) operator.", "PLUS_OP");
         }
-        else if (token->lexeme() == "*") {
-            throw error(token, "Invalid use of MULTIPLY_OP");
+        if (token->lexeme() == "*") {
+            throw error(token, "Invalid use of multiply(binary) operator.", "MULTIPLY_OP");
         }
-        else if (token->lexeme() == "/") {
-            throw error(token, "Invalid use of DIVIDE_OP");
+        if (token->lexeme() == "/") {
+            throw error(token, "Invalid use of divide(binary) operator.", "DIVIDE_OP");
         }
-        else if (token->lexeme() == "%") {
-            throw error(token, "Invalid use of MODULO_OP");
+        if (token->lexeme() == "%") {
+            throw error(token, "Invalid use of modulo(binary) operator.", "MODULO_OP");
         }
-        else if (token->lexeme() == "+=") {
-            throw error(token, "Invalid use of ADD_ASS_OP");
+        if (token->lexeme() == "+=") {
+            throw error(token, "Invalid use of addition assignment operator (Example use: x += 1)");
         }
-        else if (token->lexeme() == "-=") {
-            throw error(token, "Invalid use of SUBTRACT_ASS_OP");
+        if (token->lexeme() == "-=") {
+            throw error(
+                token,
+                "Invalid use of subtract assignment operator (Example use: x += 2)"
+                "to assign).",
+                "SUBTRCT_ASS_OP"
+            );
         }
-        else if (token->lexeme() == "*=") {
-            throw error(token, "Invalid use of MULTIPLY_ASS_OP");
+        if (token->lexeme() == "*=") {
+            throw error(
+                token,
+                "Invalid use of multiply assignment operator (it should be used with a defined identifier and  a value "
+                "to assign).",
+                "MULTPLY_ASS_OP"
+            );
         }
-        else if (token->lexeme() == "/=") {
-            throw error(token, "Invalid use of DIVIDE_ASS_OP");
+        if (token->lexeme() == "/=") {
+            throw error(
+                token,
+                "Invalid use of divide assignment operator (it should be used with a defined identifier and  a value "
+                "to assign).",
+                "DIVIDE_ASS_OP"
+            );
         }
-        else if (token->lexeme() == "%=") {
-            throw error(token, "Invalid use of MODULO_ASS_OP");
+        if (token->lexeme() == "%=") {
+            throw error(
+                token,
+                "Invalid use of modulo assignment operator (it should be used with a defined identifier and  a value "
+                "to assign).",
+                "MODULO_ASS_OP"
+            );
         }
-        else {
+        {
             throw error(token, "Undefined identifier or keyword");
         }
     }

@@ -12,9 +12,9 @@ static void report(size_t line, const std::string &where, const std::string &mes
     errors[std::to_string(line)] = ss.str();
 }
 
-inline void error(Ref<Token> token, const std::string &message) {
+inline void error(Ref<Token> token, const std::string &message, std::optional<std::string> tokenString = std::nullopt) {
     std::stringstream ss;
-    ss << " at '" << token->lexeme() << "'";
+    ss << " at token '" << tokenString.value_or(token->typeString()) << "' with lexeme '" << token->lexeme() << "'";
 
     report(token->line(), ss.str(), message);
     hasError = true;
