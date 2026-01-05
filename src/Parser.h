@@ -33,12 +33,22 @@ private:
     // List of statements
     CST statements() {
         try {
-            auto node = NonTerminalNode::make("_STATEMENTS");
-            node->add(assStmnt());
-            auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after.");
-            node->add(TerminalNode::make(sc));
+            if (auto stmt = assStmnt()) {
+                auto node = NonTerminalNode::make("_STATEMENTS");
+                node->add(stmt);
+                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after.");
+                node->add(TerminalNode::make(sc));
+                return node;
+            }
+            else if (auto stmt = decStmnt()) {
+                auto node = NonTerminalNode::make("_STATEMENTS");
+                node->add(stmt);
+                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after.");
+                node->add(TerminalNode::make(sc));
+                return node;
+            }
 
-            return node;
+            return nullptr;
         }
         catch (ParseError) {
             synchronize();
@@ -57,6 +67,39 @@ private:
     }
 
     // [[ DECLARATION PRODUCTION RULE ]]
+    CST decStmnt() {
+        auto node = NonTerminalNode::make("DEC_STMNT");
+        node->add(mod());
+
+        if (auto dataType = dt()) {
+            node->add(dataType);
+            node->add(assStmnt());
+            return node;
+        }
+        return nullptr;
+    }
+
+    CST mod() {
+        if (auto kw = match(CONST_RESW)) {
+            auto node = NonTerminalNode::make("MOD");
+            node->add(TerminalNode::make(kw));
+            return node;
+        }
+        else if (auto kw = match(STATIC_RESW)) {
+            auto node = NonTerminalNode::make("MOD");
+            node->add(TerminalNode::make(kw));
+            return node;
+        }
+        else if (auto kw = match(CONST_RESW)) {
+            if (auto kwm = match(STATIC_RESW)) {
+                auto node = NonTerminalNode::make("MOD");
+                node->add(TerminalNode::make(kw));
+                node->add(TerminalNode::make(kwm));
+                return node;
+            }
+        }
+        return nullptr;
+    }
 
     // [[ ASSIGNMENT PRODUCTION RULE ]]
     // Basic Assignment Structure
@@ -70,15 +113,18 @@ private:
     }
 
     CST assList() {
-        auto node = NonTerminalNode::make("ASS_LIST");
-        node->add(assSingle());
+        if (auto ass = assSingle()) {
+            auto node = NonTerminalNode::make("ASS_LIST");
+            node->add(ass);
 
-        while (auto comma = match(COMMA_OP)) {
-            node->add(TerminalNode::make(comma));
-            node->add(assSingle());
+            while (auto comma = match(COMMA_OP)) {
+                node->add(TerminalNode::make(comma));
+                node->add(assSingle());
+            }
+
+            return node;
         }
-
-        return node;
+        return nullptr;
     }
 
     CST assSingle() {
@@ -352,6 +398,7 @@ private:
         else if (auto mod = match(UNSIGNED_RESW)) {
             if (auto dataType = match(INT_TYPE_RESW)) {
                 auto node = NonTerminalNode::make("DT");
+                node->add(TerminalNode::make(mod));
                 node->add(TerminalNode::make(dataType));
                 return node;
             }
