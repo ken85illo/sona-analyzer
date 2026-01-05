@@ -46,7 +46,7 @@ private:
 
     TokenVec m_tokens;
     TokenSet m_userDefinedTokens;
-    IdSet m_idsDefined{ "readChar", "readLine", "print", "parseInt", "parseString", "exit" };
+    IdSet m_idsDefined{ "readChar", "readLine", "print", "parseInt", "parseString", "exit", "x" };
 
     size_t m_start = 0;
     size_t m_current = 0;

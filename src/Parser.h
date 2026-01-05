@@ -1,8 +1,7 @@
 #pragma once
 
+#include "CST.h"
 #include "Error.h"
-#include "Expr.h"
-#include "ParseResult.h"
 #include "Token.h"
 
 class Parser {
@@ -15,8 +14,31 @@ public:
     : m_tokens(tokens) {}
 
     CST parse() {
+        auto node = NonTerminalNode::make("_BODY");
+        while (!isAtEnd()) {
+            if (auto stmt = statements()) {
+                node->add(stmt);
+            }
+        }
+        return node;
+    }
+
+    const TokenVec &m_tokens;
+
+private:
+    size_t current = 0;
+
+    /* ================= Grammar ================= */
+
+    // List of statements
+    CST statements() {
         try {
-            return expression();
+            auto node = NonTerminalNode::make("_STATEMENTS");
+            node->add(assStmnt());
+            auto sc = consume(SEMICOLON_DELIM, "Assignment statement must end in semicolon");
+            node->add(TerminalNode::make(sc));
+
+            return node;
         }
         catch (ParseError) {
             synchronize();
@@ -24,11 +46,66 @@ public:
         }
     }
 
-private:
-    const TokenVec &m_tokens;
-    size_t current = 0;
+    // Naming Identifiers
+    CST id() {
+        auto node = NonTerminalNode::make("ID");
+        auto ident = consume(IDENTIFIER, "Expected an identifier");
+        node->add(TerminalNode::make(ident));
+        return node;
+    }
 
-    /* ================= Grammar ================= */
+    // Basic Assignment Structure
+    CST assStmnt() {
+        if (auto list = assList()) {
+            auto node = NonTerminalNode::make("ASS_STMNT");
+            node->add(list);
+            return node;
+        }
+        return nullptr;
+    }
+
+    CST assList() {
+        auto node = NonTerminalNode::make("ASS_LIST");
+        node->add(assSingle());
+
+        while (auto comma = match(COMMA_OP)) {
+            node->add(TerminalNode::make(comma));
+            node->add(assSingle());
+        }
+
+        return node;
+    }
+
+    CST assSingle() {
+        if (auto op = operandList()) {
+            auto node = NonTerminalNode::make("ASS_SINGLE");
+            node->add(op);
+            node->add(assTail());
+            return node;
+        }
+        else if (auto op = unaryAssOp()) {
+            auto node = NonTerminalNode::make("ASS_SINGLE");
+            node->add(op);
+            node->add(operandList());
+            return node;
+        }
+        return nullptr;
+    }
+
+    CST assTail() {
+        if (auto op = assOp()) {
+            auto node = NonTerminalNode::make("ASS_TAIL");
+            node->add(assOp());
+            node->add(expression());
+            return node;
+        }
+        else if (auto op = unaryAssOp()) {
+            auto node = NonTerminalNode::make("ASS_TAIL");
+            node->add(unaryAssOp());
+            return node;
+        }
+        return nullptr;
+    }
 
     // General Expression
     CST expression() {
@@ -42,8 +119,8 @@ private:
         auto node = NonTerminalNode::make("LOGICAL_LEVEL");
         node->add(relLevel());
 
-        while (auto op = logOp()) {
-            node->add(op);
+        while (auto nt = logOp()) {
+            node->add(nt);
             node->add(relLevel());
         }
         return node;
@@ -53,8 +130,8 @@ private:
         auto node = NonTerminalNode::make("REL_LEVEL");
         node->add(arithLevel());
 
-        while (auto op = relOp()) {
-            node->add(op);
+        while (auto nt = relOp()) {
+            node->add(nt);
             node->add(arithLevel());
         }
         return node;
@@ -64,8 +141,8 @@ private:
         auto node = NonTerminalNode::make("ARITH_LEVEL");
         node->add(term());
 
-        while (auto op = addOp()) {
-            node->add(op);
+        while (auto nt = addOp()) {
+            node->add(nt);
             node->add(term());
         }
         return node;
@@ -75,26 +152,29 @@ private:
         auto node = NonTerminalNode::make("TERM");
         node->add(factor());
 
-        while (auto op = multOp()) {
-            node->add(op);
+        while (auto nt = multOp()) {
+            node->add(nt);
             node->add(factor());
         }
         return node;
     }
 
     CST factor() {
-        auto node = NonTerminalNode::make("FACTOR");
-        if (auto op = operand()) {
-            node->add(op);
+        if (auto nt = operand()) {
+            auto node = NonTerminalNode::make("FACTOR");
+            node->add(nt);
+            return node;
         }
         else if (auto leftParen = match(LEFT_PAREN_DELIM)) {
+            auto node = NonTerminalNode::make("FACTOR");
+
             node->add(TerminalNode::make(leftParen));
             node->add(expression());
             auto rightParen = consume(RIGHT_PAREN_DELIM, "Expect ')' after expression ");
             node->add(TerminalNode::make(rightParen));
+            return node;
         }
-
-        return node;
+        throw error(peek(), "Expect NUMBER, REAL_NUMBER, or BOOL literals inside expression");
     }
 
     // Operators
@@ -136,41 +216,101 @@ private:
         return nullptr;
     }
 
-    // Expression operands
-    CST operand() {
-        auto node = NonTerminalNode::make("OPERAND");
-        if (auto op = number()) {
-            node->add(op);
+    CST unaryAssOp() {
+        if (auto op = match(PRE_INCRMNT_OP, PRE_DECRMNT_OP, POST_INCRMNT_OP, POST_DECRMNT_OP)) {
+            auto node = NonTerminalNode::make("UNARY_ASS_OP");
+            node->add(TerminalNode::make(op));
             return node;
         }
-        else if (auto op = realNum()) {
-            node->add(op);
-            return node;
-        }
-        else if (auto op = boolG()) {
-            node->add(op);
-            return node;
-        }
-        throw error(peek(), "Expect NUMBER, REAL_NUMBER, or BOOL literals inside expression");
-
         return nullptr;
     }
 
-    // Construccting Numbers
+    CST assOp() {
+        if (auto op = match(ADD_ASS_OP, SUBTRCT_ASS_OP, DIVIDE_ASS_OP, MODULO_ASS_OP, MULTPLY_ASS_OP, EQUAL_ASS_OP)) {
+            auto node = NonTerminalNode::make("ASS_OP");
+            node->add(TerminalNode::make(op));
+            return node;
+        }
+        return nullptr;
+    }
+
+    // Expression operands
+    CST operand() {
+        if (auto nt = number()) {
+            auto node = NonTerminalNode::make("OPERAND");
+            node->add(nt);
+            return node;
+        }
+        else if (auto nt = realNum()) {
+            auto node = NonTerminalNode::make("OPERAND");
+            node->add(nt);
+            return node;
+        }
+        else if (auto nt = boolG()) {
+            auto node = NonTerminalNode::make("OPERAND");
+            node->add(nt);
+            return node;
+        }
+        return nullptr;
+    }
+
+    // Variable operand cases
+    CST unaryStmnt() {
+        if (auto stmt = unaryAssStmt()) {
+            auto node = NonTerminalNode::make("UNARY_STMNT");
+            node->add(stmt);
+            return node;
+        }
+        else if (auto stmt = operand()) {
+            auto node = NonTerminalNode::make("UNARY_STMNT");
+            node->add(stmt);
+            return node;
+        }
+        return nullptr;
+    }
+
+    CST unaryAssStmt() {
+        if (auto op = unaryAssOp()) {
+            auto node = NonTerminalNode::make("UNARY_ASS_STMT");
+            node->add(op);
+            node->add(operandList());
+            return node;
+        }
+        else if (auto op = operandList()) {
+            auto node = NonTerminalNode::make("UNARY_ASS_STMT");
+            node->add(op);
+            node->add(unaryAssOp());
+            return node;
+        }
+        return nullptr;
+    }
+
+    CST operandList() {
+        auto node = NonTerminalNode::make("OPERAND_LIST");
+        node->add(id());
+        return node;
+    }
+
+    // Constructing Numbers
     CST number() {
-        auto node = NonTerminalNode::make("NUMBER");
         if (auto op = match(INT_LITERAL)) {
+            auto node = NonTerminalNode::make("NUMBER");
+
             auto test = TerminalNode::make(op);
             node->add(test);
             return node;
         }
         else if (auto op = match(POSITIVE_OP)) {
+            auto node = NonTerminalNode::make("NUMBER");
+
             node->add(TerminalNode::make(op));
             auto operand = consume(INT_LITERAL, "Expect a number after POSITIVE_OP");
             node->add(TerminalNode::make(operand));
             return node;
         }
         else if (auto op = match(NEGATIVE_OP)) {
+            auto node = NonTerminalNode::make("NUMBER");
+
             node->add(TerminalNode::make(op));
             auto operand = consume(INT_LITERAL, "Expect a number after NEGATIVE_OP");
             node->add(TerminalNode::make(operand));
@@ -180,18 +320,23 @@ private:
     }
 
     CST realNum() {
-        auto node = NonTerminalNode::make("REAL_NUM");
         if (auto op = match(FLT_LITERAL)) {
+            auto node = NonTerminalNode::make("REAL_NUM");
+
             node->add(TerminalNode::make(op));
             return node;
         }
         else if (auto op = match(POSITIVE_OP)) {
+            auto node = NonTerminalNode::make("REAL_NUM");
+
             node->add(TerminalNode::make(op));
             auto operand = consume(FLT_LITERAL, "Expect a number after POSITIVE_OP");
             node->add(TerminalNode::make(operand));
             return node;
         }
         else if (auto op = match(NEGATIVE_OP)) {
+            auto node = NonTerminalNode::make("REAL_NUM");
+
             node->add(TerminalNode::make(op));
             auto operand = consume(FLT_LITERAL, "Expect a number after NEGATIVE_OP");
             node->add(TerminalNode::make(operand));
@@ -202,12 +347,15 @@ private:
 
     // Constants
     CST boolG() {
-        auto node = NonTerminalNode::make("BOOL");
         if (auto op = match(TRUE_LITERAL)) {
+            auto node = NonTerminalNode::make("BOOL");
+
             node->add(TerminalNode::make(op));
             return node;
         }
         else if (auto op = match(FALSE_LITERAL)) {
+            auto node = NonTerminalNode::make("BOOL");
+
             node->add(TerminalNode::make(op));
             return node;
         }
