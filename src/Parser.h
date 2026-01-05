@@ -110,7 +110,7 @@ private:
         auto node = NonTerminalNode::make("unary");
 
         if (auto op = match(NOT_LOG_OP, NEGATIVE_OP, POSITIVE_OP)) {
-            auto right = unary();
+            auto right = primary();
 
             node->add(TerminalNode::make(op));
             node->add(right->cst);
@@ -141,6 +141,7 @@ private:
             return ParseResult::make(GroupingExpr::make(expr->ast), node);
         }
 
+        validateToken(peek());
         throw error(
             peek(),
             "[SYNTAX] Expect STR_LITERAL, INT_LITERAL, FLT_LITERAL, FALSE_LITERAL, or TRUE_LITERAL in expression."
@@ -199,8 +200,49 @@ private:
     }
 
     void validateToken(Ref<Token> token) {
-        if (token->type() == UNKNOWN) {
-            throw error(peek(), "[LEXICAL] Identified this as UNKNOWN token!");
+        if (token->type() != UNKNOWN) {
+            return;
+        }
+
+        // Handle lexical unknown tokens
+        if (token->lexeme() == "++") {
+            throw error(peek(), "Invalid use of INCREMENT_OP");
+        }
+        else if (token->lexeme() == "--") {
+            throw error(peek(), "Invalid use of DECREMENT_OP");
+        }
+        else if (token->lexeme() == "-") {
+            throw error(peek(), "Invalid use of NEGATIVE_OP or SUBTRACT_OP");
+        }
+        else if (token->lexeme() == "+") {
+            throw error(peek(), "Invalid use of POSITIVE_OP or ADD_OP");
+        }
+        else if (token->lexeme() == "*") {
+            throw error(peek(), "Invalid use of MULTIPLY_OP");
+        }
+        else if (token->lexeme() == "/") {
+            throw error(peek(), "Invalid use of DIVIDE_OP");
+        }
+        else if (token->lexeme() == "%") {
+            throw error(peek(), "Invalid use of MODULO_OP");
+        }
+        else if (token->lexeme() == "+=") {
+            throw error(peek(), "Invalid use of ADD_ASS_OP");
+        }
+        else if (token->lexeme() == "-=") {
+            throw error(peek(), "Invalid use of SUBTRACT_ASS_OP");
+        }
+        else if (token->lexeme() == "*=") {
+            throw error(peek(), "Invalid use of MULTIPLY_ASS_OP");
+        }
+        else if (token->lexeme() == "/=") {
+            throw error(peek(), "Invalid use of DIVIDE_ASS_OP");
+        }
+        else if (token->lexeme() == "%=") {
+            throw error(peek(), "Invalid use of MODULO_ASS_OP");
+        }
+        else {
+            throw error(peek(), "Undefined identifier or keyword");
         }
     }
 

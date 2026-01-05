@@ -1,5 +1,5 @@
 #include "Scanner.h"
-#include "SpecialWords.h"
+#include "TokenWords.h"
 
 void Scanner::scanToken() {
     char c = advance();
