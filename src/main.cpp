@@ -21,8 +21,8 @@ int main(int argc, char *argv[]) {
 
     ordered_json out;
     out["lexical"] = scanner.output();
-    out["syntactical"] = (!parseOut) ? ordered_json() : parseOut->cst->toJson();
+    out["syntactical"] = (!parseOut) ? ordered_json() : parseOut->toJson();
     out["errors"] = errorJson();
 
-    std::cout << out.dump(2); // remove yung padding para mas mabilis yung parsing
+    std::cout << out.dump(1); // remove yung padding para mas mabilis yung parsing
 }
