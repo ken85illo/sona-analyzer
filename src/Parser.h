@@ -30,129 +30,115 @@ private:
     /* ================= Grammar ================= */
 
     Ref<ParseResult> expression() {
-        auto node = MakeRef<NonTerminalNode>("expression");
+        auto node = NonTerminalNode::make("expression");
 
         auto left = equality();
-        node->children.push_back(left->cst);
+        node->add(left->cst);
 
-        return MakeRef<ParseResult>(left->ast, node);
+        return ParseResult::make(left->ast, node);
     }
 
     Ref<ParseResult> equality() {
-        auto node = MakeRef<NonTerminalNode>("equality");
+        auto node = NonTerminalNode::make("equality");
 
         auto left = comparison();
-        node->children.push_back(left->cst);
+        node->add(left->cst);
 
-        while (match(NOT_EQUAL_REL_OP, EQUAL_REL_OP)) {
-            Ref<Token> op = previous();
-            validateToken(op);
+        while (auto op = match(NOT_EQUAL_REL_OP, EQUAL_REL_OP)) {
             auto right = comparison();
 
-            node->children.push_back(MakeRef<TerminalNode>(op));
-            node->children.push_back(right->cst);
+            node->add(TerminalNode::make(op));
+            node->add(right->cst);
 
-            left->ast = MakeRef<BinaryExpr>(left->ast, op, right->ast);
+            left->ast = BinaryExpr::make(left->ast, op, right->ast);
         }
-        return MakeRef<ParseResult>(left->ast, node);
+        return ParseResult::make(left->ast, node);
     }
 
     Ref<ParseResult> comparison() {
-        auto node = MakeRef<NonTerminalNode>("comparison");
+        auto node = NonTerminalNode::make("comparison");
 
         auto left = term();
-        node->children.push_back(left->cst);
+        node->add(left->cst);
 
-        while (match(GREATER_REL_OP, GREATER_EQUAL_REL_OP, LESS_REL_OP, LESS_EQUAL_REL_OP)) {
-            Ref<Token> op = previous();
-            validateToken(op);
+        while (auto op = match(GREATER_REL_OP, GREATER_EQUAL_REL_OP, LESS_REL_OP, LESS_EQUAL_REL_OP)) {
             auto right = term();
 
-            node->children.push_back(MakeRef<TerminalNode>(op));
-            node->children.push_back(right->cst);
+            node->add(TerminalNode::make(op));
+            node->add(right->cst);
 
-            left->ast = MakeRef<BinaryExpr>(left->ast, op, right->ast);
+            left->ast = BinaryExpr::make(left->ast, op, right->ast);
         }
-        return MakeRef<ParseResult>(left->ast, node);
+        return ParseResult::make(left->ast, node);
     }
 
     Ref<ParseResult> term() {
-        auto node = MakeRef<NonTerminalNode>("term");
+        auto node = NonTerminalNode::make("term");
 
         auto left = factor();
-        node->children.push_back(left->cst);
+        node->add(left->cst);
 
-        while (match(SUBTRACT_OP, ADD_OP)) {
-            Ref<Token> op = previous();
-            validateToken(op);
+        while (auto op = match(SUBTRACT_OP, ADD_OP)) {
             auto right = factor();
 
-            node->children.push_back(MakeRef<TerminalNode>(op));
-            node->children.push_back(right->cst);
+            node->add(TerminalNode::make(op));
+            node->add(right->cst);
 
-            left->ast = MakeRef<BinaryExpr>(left->ast, op, right->ast);
+            left->ast = BinaryExpr::make(left->ast, op, right->ast);
         }
-        return MakeRef<ParseResult>(left->ast, node);
+        return ParseResult::make(left->ast, node);
     }
 
     Ref<ParseResult> factor() {
-        auto node = MakeRef<NonTerminalNode>("factor");
+        auto node = NonTerminalNode::make("factor");
 
         auto left = unary();
-        node->children.push_back(left->cst);
+        node->add(left->cst);
 
-        while (match(DIVIDE_OP, MULTIPLY_OP)) {
-            Ref<Token> op = previous();
-            validateToken(op);
+        while (auto op = match(DIVIDE_OP, MULTIPLY_OP)) {
             auto right = unary();
 
-            node->children.push_back(MakeRef<TerminalNode>(op));
-            node->children.push_back(right->cst);
+            node->add(TerminalNode::make(op));
+            node->add(right->cst);
 
-            left->ast = MakeRef<BinaryExpr>(left->ast, op, right->ast);
+            left->ast = BinaryExpr::make(left->ast, op, right->ast);
         }
-        return MakeRef<ParseResult>(left->ast, node);
+        return ParseResult::make(left->ast, node);
     }
 
     Ref<ParseResult> unary() {
-        auto node = MakeRef<NonTerminalNode>("unary");
+        auto node = NonTerminalNode::make("unary");
 
-        if (match(NOT_LOG_OP, NEGATIVE_OP, POSITIVE_OP)) {
-            Ref<Token> op = previous();
-            validateToken(op);
-
+        if (auto op = match(NOT_LOG_OP, NEGATIVE_OP, POSITIVE_OP)) {
             auto right = unary();
 
-            node->children.push_back(MakeRef<TerminalNode>(op));
-            node->children.push_back(right->cst);
+            node->add(TerminalNode::make(op));
+            node->add(right->cst);
 
-            return MakeRef<ParseResult>(MakeRef<UnaryExpr>(op, right->ast), node);
+            return ParseResult::make(UnaryExpr::make(op, right->ast), node);
         }
 
         return primary();
     }
 
     Ref<ParseResult> primary() {
-        auto node = MakeRef<NonTerminalNode>("primary");
-        auto token = peek();
+        auto node = NonTerminalNode::make("primary");
 
-        validateToken(token);
-
-        if (match(INT_LITERAL, FLT_LITERAL, TRUE_LITERAL, FALSE_LITERAL, STR_LITERAL)) {
-            node->children.push_back(MakeRef<TerminalNode>(token));
-            return MakeRef<ParseResult>(MakeRef<LiteralExpr>(token), node);
+        if (auto token = match(INT_LITERAL, FLT_LITERAL, TRUE_LITERAL, FALSE_LITERAL, STR_LITERAL)) {
+            node->add(TerminalNode::make(token));
+            return ParseResult::make(LiteralExpr::make(token), node);
         }
 
-        if (match(LEFT_PAREN_DELIM)) {
-            node->children.push_back(MakeRef<TerminalNode>(token));
+        if (auto leftParen = match(LEFT_PAREN_DELIM)) {
+            node->add(TerminalNode::make(leftParen));
 
             auto expr = expression();
-            node->children.push_back(expr->cst);
+            node->add(expr->cst);
 
-            consume(RIGHT_PAREN_DELIM, "Expect ')' after expression.");
-            node->children.push_back(MakeRef<TerminalNode>(previous()));
+            auto rightParen = consume(RIGHT_PAREN_DELIM, "Expect ')' after expression.");
+            node->add(TerminalNode::make(rightParen));
 
-            return MakeRef<ParseResult>(MakeRef<GroupingExpr>(expr->ast), node);
+            return ParseResult::make(GroupingExpr::make(expr->ast), node);
         }
 
         throw error(
@@ -165,6 +151,7 @@ private:
 
     Ref<Token> consume(TokenType type, const std::string &message) {
         if (check(type)) {
+            validateToken(peek());
             return advance();
         }
 
@@ -177,12 +164,12 @@ private:
     }
 
     template <typename... TokenType>
-    bool match(TokenType... types) {
+    Ref<Token> match(TokenType... types) {
         if ((check(types) || ...)) {
-            advance();
-            return true;
+            validateToken(peek());
+            return advance();
         }
-        return false;
+        return nullptr;
     }
 
     bool check(TokenType type) {
@@ -194,7 +181,7 @@ private:
 
     Ref<Token> advance() {
         if (!isAtEnd()) {
-            current++;
+            ++current;
         }
         return previous();
     }

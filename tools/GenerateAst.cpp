@@ -85,6 +85,34 @@ void defineType(std::ofstream &file, StrRef baseName, StrRef className, StrRef f
 
         file << "    const Ref<" << type << "> " << name << ";\n";
     }
+    file << "\n";
+
+    file << "    static Ref<" << className << baseName << "> make(";
+    for (int i = 0; i < fields.size(); i++) {
+        auto strList = split(fields[i], ' ');
+        auto type = trim(strList[0]);
+        auto name = trim(strList[1]);
+
+        file << "const Ref<" << type << "> " << name;
+
+        if (i < fields.size() - 1) {
+            file << ", ";
+        }
+    }
+    file << ") {\n";
+    file << "        return MakeRef<" << className << baseName << ">(";
+    for (int i = 0; i < fields.size(); i++) {
+        auto strList = split(fields[i], ' ');
+        auto type = trim(strList[0]);
+        auto name = trim(strList[1]);
+
+        file << name;
+
+        if (i < fields.size() - 1) {
+            file << ", ";
+        }
+    }
+    file << ");\n    }\n";
 
     file << "};\n\n";
 }

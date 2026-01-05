@@ -16,19 +16,16 @@ public:
 
 class NonTerminalNode : public CSTNode {
 public:
-    std::string name;
-    std::vector<CST> children;
-
     explicit NonTerminalNode(const std::string &name)
-    : name(name) {}
+    : m_name(name) {}
 
     ordered_json toJson() const override {
         ordered_json j;
         j["type"] = "non_terminal";
-        j["name"] = name;
+        j["name"] = m_name;
         j["children"] = ordered_json::array();
 
-        for (const auto &child: children) {
+        for (const auto &child: m_children) {
             if (child != nullptr) {
                 j["children"].push_back(child->toJson());
             }
@@ -36,21 +33,38 @@ public:
 
         return j;
     }
+
+    void add(CST node) {
+        m_children.push_back(node);
+    }
+
+    static Ref<NonTerminalNode> make(const std::string &name) {
+        return MakeRef<NonTerminalNode>(name);
+    }
+
+private:
+    std::string m_name;
+    std::vector<CST> m_children;
 };
 
 class TerminalNode : public CSTNode {
 public:
-    std::string lexeme;
-    std::string tokenType;
-
     TerminalNode(Ref<Token> token)
-    : lexeme(token->lexeme()), tokenType(token->typeString()) {}
+    : m_lexeme(token->lexeme()), m_tokenType(token->typeString()) {}
 
     ordered_json toJson() const override {
         return ordered_json{
-            {       "type", "terminal" },
-            {     "lexeme",     lexeme },
-            { "token_type",  tokenType }
+            {       "type",  "terminal" },
+            {     "lexeme",    m_lexeme },
+            { "token_type", m_tokenType }
         };
     }
+
+    static Ref<TerminalNode> make(Ref<Token> token) {
+        return MakeRef<TerminalNode>(token);
+    }
+
+private:
+    std::string m_lexeme;
+    std::string m_tokenType;
 };

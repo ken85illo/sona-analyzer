@@ -1,6 +1,7 @@
 #pragma once
 #include "Expr.h"
 #include "Ref.h"
+#include "Token.h"
 
 class ExpressionStmt;
 class PrintStmt;
@@ -29,6 +30,10 @@ public:
     }
 
     const Ref<Expr> expression;
+
+    static Ref<ExpressionStmt> make(const Ref<Expr> expression) {
+        return MakeRef<ExpressionStmt>(expression);
+    }
 };
 
 class PrintStmt : public Stmt {
@@ -41,4 +46,8 @@ public:
     }
 
     const Ref<Expr> expression;
+
+    static Ref<PrintStmt> make(const Ref<Expr> expression) {
+        return MakeRef<PrintStmt>(expression);
+    }
 };
