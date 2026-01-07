@@ -64,7 +64,31 @@ public:
         return MakeRef<TerminalNode>(token);
     }
 
-private:
+protected:
     std::string m_lexeme;
     std::string m_tokenType;
+};
+
+class ErrorNode : public CSTNode {
+public:
+    ErrorNode(Ref<Token> token, size_t synchronize)
+    : m_line(token->line()), m_synchronize(synchronize) {}
+
+    ordered_json toJson() const {
+        return ordered_json{
+            {        "type",       "error" },
+            {        "line",        m_line },
+            {       "index",  errorIndex++ },
+            { "synchronize", m_synchronize }
+        };
+    }
+
+    static Ref<ErrorNode> make(Ref<Token> token, size_t synchronize) {
+        return MakeRef<ErrorNode>(token, synchronize);
+    }
+
+private:
+    inline static size_t errorIndex = 0;
+    const size_t m_line;
+    const size_t m_synchronize;
 };

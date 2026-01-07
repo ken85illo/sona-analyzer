@@ -26,22 +26,21 @@ public:
     const TokenVec &m_tokens;
 
 private:
-    size_t current = 0;
+    size_t m_current = 0;
 
     /* ================= Grammar ================= */
 
     // List of statements
     CST statements() {
+        auto node = NonTerminalNode::make("_STATEMENTS");
         try {
             if (auto stmt = assStmnt()) {
-                auto node = NonTerminalNode::make("_STATEMENTS");
                 node->add(stmt);
                 auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after.");
                 node->add(TerminalNode::make(sc));
                 return node;
             }
             else if (auto stmt = decStmnt()) {
-                auto node = NonTerminalNode::make("_STATEMENTS");
                 node->add(stmt);
                 auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after.");
                 node->add(TerminalNode::make(sc));
@@ -51,8 +50,8 @@ private:
             return nullptr;
         }
         catch (ParseError) {
-            synchronize();
-            return nullptr;
+            node->add(ErrorNode::make(advance(), synchronize()));
+            return node;
         }
     }
 
@@ -518,13 +517,13 @@ private:
 
     Ref<Token> advance() {
         if (!isAtEnd()) {
-            ++current;
+            ++m_current;
         }
         return previous();
     }
 
     bool isAtEnd() {
-        return current == m_tokens.size();
+        return m_current == m_tokens.size();
     }
 
     Ref<Token> peek() {
@@ -532,15 +531,15 @@ private:
             return previous();
         }
 
-        return m_tokens[current];
+        return m_tokens[m_current];
     }
 
     Ref<Token> previous() {
-        if (current - 1 < 0) {
+        if (m_current - 1 < 0) {
             return m_tokens[0];
         }
 
-        return m_tokens[current - 1];
+        return m_tokens[m_current - 1];
     }
 
     void validateToken(Ref<Token> token) {
@@ -575,7 +574,7 @@ private:
             throw error(token, "Invalid use of modulo(binary) operator.", "MODULO_OP");
         }
         if (token->lexeme() == "+=") {
-            throw error(token, "Invalid use of addition assignment operator (Example use: x += 1)");
+            throw error(token, "Invalid use of addition assignment operator (Example use: x += 1)", "ADD_ASS_OP");
         }
         if (token->lexeme() == "-=") {
             throw error(
@@ -614,12 +613,12 @@ private:
         }
     }
 
-    void synchronize() {
+    size_t synchronize() {
         advance();
 
         while (!isAtEnd()) {
             if (previous()->type() == SEMICOLON_DELIM) {
-                return;
+                return m_current;
             }
 
             switch (peek()->type()) {
@@ -646,7 +645,7 @@ private:
             case IF_RESW:
             case WHILE_KEYW:
             case RETURN_RESW:
-                return;
+                return m_current;
                 break;
             default:
                 break;
@@ -654,5 +653,7 @@ private:
 
             advance();
         }
+
+        return m_current;
     }
 };
