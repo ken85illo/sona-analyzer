@@ -38,16 +38,14 @@ private:
                 node->add(stmt);
                 auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after.");
                 node->add(TerminalNode::make(sc));
-                return node;
             }
             else if (auto stmt = decStmnt()) {
                 node->add(stmt);
                 auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after.");
                 node->add(TerminalNode::make(sc));
-                return node;
             }
 
-            return nullptr;
+            return node;
         }
         catch (ParseError) {
             node->add(ErrorNode::make(advance(), synchronize()));
@@ -60,104 +58,6 @@ private:
         if (auto ident = match(IDENTIFIER)) {
             auto node = NonTerminalNode::make("ID");
             node->add(TerminalNode::make(ident));
-            return node;
-        }
-        return nullptr;
-    }
-
-    // [[ DECLARATION PRODUCTION RULE ]]
-    CST decStmnt() {
-        auto node = NonTerminalNode::make("DEC_STMNT");
-        node->add(mod());
-
-        if (auto dataType = dt()) {
-            node->add(dataType);
-            node->add(assStmnt());
-            return node;
-        }
-        return nullptr;
-    }
-
-    CST mod() {
-        if (auto kw = match(CONST_RESW)) {
-            auto node = NonTerminalNode::make("MOD");
-            node->add(TerminalNode::make(kw));
-            return node;
-        }
-        else if (auto kw = match(STATIC_RESW)) {
-            auto node = NonTerminalNode::make("MOD");
-            node->add(TerminalNode::make(kw));
-            return node;
-        }
-        else if (auto kw = match(CONST_RESW)) {
-            if (auto kwm = match(STATIC_RESW)) {
-                auto node = NonTerminalNode::make("MOD");
-                node->add(TerminalNode::make(kw));
-                node->add(TerminalNode::make(kwm));
-                return node;
-            }
-        }
-        return nullptr;
-    }
-
-    // [[ ASSIGNMENT PRODUCTION RULE ]]
-    // Basic Assignment Structure
-    CST assStmnt() {
-        if (auto list = assList()) {
-            auto node = NonTerminalNode::make("ASS_STMNT");
-            node->add(list);
-            return node;
-        }
-        return nullptr;
-    }
-
-    CST assList() {
-        if (auto ass = assSingle()) {
-            auto node = NonTerminalNode::make("ASS_LIST");
-            node->add(ass);
-
-            while (auto comma = match(COMMA_OP)) {
-                node->add(TerminalNode::make(comma));
-                node->add(assSingle());
-            }
-
-            return node;
-        }
-        return nullptr;
-    }
-
-    CST assSingle() {
-        if (auto op = operandList()) {
-            auto node = NonTerminalNode::make("ASS_SINGLE");
-            node->add(op);
-            if (auto at = assTail()) {
-                node->add(at);
-            }
-            else {
-                throw error(previous(), "Expected an assignment operator after variable.");
-            }
-            return node;
-        }
-        else if (auto op = unaryAssOp()) {
-            auto node = NonTerminalNode::make("ASS_SINGLE");
-            node->add(op);
-            node->add(operandList());
-            return node;
-        }
-        return nullptr;
-    }
-
-    CST assTail() {
-        if (auto op = assOp()) {
-            auto node = NonTerminalNode::make("ASS_TAIL");
-            node->add(op);
-
-            node->add(expression());
-            return node;
-        }
-        else if (auto op = unaryAssOp()) {
-            auto node = NonTerminalNode::make("ASS_TAIL");
-            node->add(op);
             return node;
         }
         return nullptr;
@@ -298,9 +198,10 @@ private:
             node->add(nt);
             return node;
         }
-        else if (auto nt = unaryStmnt()) {
+        else if (auto op = match(NOT_LOG_OP)) {
             auto node = NonTerminalNode::make("OPERAND");
-            node->add(nt);
+            node->add(TerminalNode::make(op));
+            node->add(operandList());
             return node;
         }
         else if (auto nt = assSingle()) {
@@ -312,34 +213,18 @@ private:
     }
 
     // Variable operand cases
-    CST unaryStmnt() {
-        if (auto op = unaryAssOp()) {
-            auto node = NonTerminalNode::make("UNARY_STMNT");
-            node->add(op);
-            node->add(operandList());
+    CST operandList() {
+        if (auto ident = operandId()) {
+            auto node = NonTerminalNode::make("OPERAND_LIST");
+            node->add(ident);
             return node;
         }
-        else if (auto op = operandList()) {
-            auto node = NonTerminalNode::make("UNARY_STMNT");
-            node->add(op);
-            node->add(operandSuffix());
+        else if (auto literal = operandLiteral()) {
+            auto node = NonTerminalNode::make("OPERAND_LIST");
+            node->add(literal);
             return node;
         }
-        else if (auto op = match(NOT_LOG_OP)) {
-            auto node = NonTerminalNode::make("UNARY_STMNT");
-            node->add(TerminalNode::make(op));
-            node->add(operandLiteral());
-            return node;
-        }
-        return nullptr;
-    }
 
-    CST operandSuffix() {
-        if (auto op = unaryAssOp()) {
-            auto node = NonTerminalNode::make("OPERAND_SUFFIX");
-            node->add(op);
-            return node;
-        }
         return nullptr;
     }
 
@@ -362,14 +247,13 @@ private:
         return nullptr;
     }
 
-    CST operandList() {
+    CST operandId() {
         if (auto ident = id()) {
-            auto node = NonTerminalNode::make("OPERAND_LIST");
+            auto node = NonTerminalNode::make("OPERAND_ID");
             node->add(ident);
             node->add(idSuffix());
             return node;
         }
-
         return nullptr;
     }
 
@@ -474,6 +358,103 @@ private:
             return node;
         }
 
+        return nullptr;
+    }
+
+    // [[ DECLARATION PRODUCTION RULE ]]
+    CST decStmnt() {
+        auto node = NonTerminalNode::make("DEC_STMNT");
+        node->add(mod());
+
+        if (auto dataType = dt()) {
+            node->add(dataType);
+            node->add(assStmnt());
+            return node;
+        }
+        return nullptr;
+    }
+
+    CST mod() {
+        if (auto kw = match(CONST_RESW)) {
+            auto node = NonTerminalNode::make("MOD");
+            node->add(TerminalNode::make(kw));
+            return node;
+        }
+        else if (auto kw = match(STATIC_RESW)) {
+            auto node = NonTerminalNode::make("MOD");
+            node->add(TerminalNode::make(kw));
+            return node;
+        }
+        else if (auto kw = match(CONST_RESW)) {
+            if (auto kwm = match(STATIC_RESW)) {
+                auto node = NonTerminalNode::make("MOD");
+                node->add(TerminalNode::make(kw));
+                node->add(TerminalNode::make(kwm));
+                return node;
+            }
+        }
+        return nullptr;
+    }
+
+    // [[ ASSIGNMENT PRODUCTION RULE ]]
+    // Basic Assignment Structure
+    CST assStmnt() {
+        if (auto list = assList()) {
+            auto node = NonTerminalNode::make("ASS_STMNT");
+            node->add(list);
+            return node;
+        }
+        return nullptr;
+    }
+
+    CST assList() {
+        if (auto ass = assSingle()) {
+            auto node = NonTerminalNode::make("ASS_LIST");
+            node->add(ass);
+
+            while (auto comma = match(COMMA_OP)) {
+                node->add(TerminalNode::make(comma));
+                node->add(assSingle());
+            }
+
+            return node;
+        }
+        return nullptr;
+    }
+
+    CST assSingle() {
+        if (auto op = operandId()) {
+            auto node = NonTerminalNode::make("ASS_SINGLE");
+            node->add(op);
+            if (auto at = assTail()) {
+                node->add(at);
+            }
+            else {
+                throw error(previous(), "Expected an assignment operator after variable.");
+            }
+            return node;
+        }
+        else if (auto op = unaryAssOp()) {
+            auto node = NonTerminalNode::make("ASS_SINGLE");
+            node->add(op);
+            node->add(operandId());
+            return node;
+        }
+        return nullptr;
+    }
+
+    CST assTail() {
+        if (auto op = assOp()) {
+            auto node = NonTerminalNode::make("ASS_TAIL");
+            node->add(op);
+            node->add(expression());
+            return node;
+        }
+        else if (auto op = unaryAssOp()) {
+            auto node = NonTerminalNode::make("ASS_TAIL");
+            node->add(op);
+            return node;
+        }
         return nullptr;
     }
 
