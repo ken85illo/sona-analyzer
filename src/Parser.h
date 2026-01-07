@@ -26,26 +26,71 @@ public:
     const TokenVec &m_tokens;
 
 private:
-    size_t m_current = 0;
+    int64_t m_current = 0;
 
     /* ================= Grammar ================= */
+
+    // Global + Data Type
+    CST mod() {
+        if (auto kw = match(CONST_RESW)) {
+            if (auto kwm = match(STATIC_RESW)) {
+                auto node = NonTerminalNode::make("MOD");
+                node->add(TerminalNode::make(kw));
+                node->add(TerminalNode::make(kwm));
+                return node;
+            }
+        }
+        else if (auto kw = match(CONST_RESW)) {
+            auto node = NonTerminalNode::make("MOD");
+            node->add(TerminalNode::make(kw));
+            return node;
+        }
+        else if (auto kw = match(STATIC_RESW)) {
+            auto node = NonTerminalNode::make("MOD");
+            node->add(TerminalNode::make(kw));
+            return node;
+        }
+        return nullptr;
+    }
+
+    CST decSign() {
+        auto node = NonTerminalNode::make("DEC_SIGN");
+        node->add(mod());
+
+        if (auto type = dt()) {
+            node->add(type);
+            node->add(dtSuffix());
+            return node;
+        }
+        return nullptr;
+    }
+
+    CST dtSuffix() {
+        if (auto stmt = decStmnt()) {
+            auto node = NonTerminalNode::make("DT_SUFFIX");
+            node->add(stmt);
+            auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after.");
+            node->add(TerminalNode::make(sc));
+            return node;
+        }
+        throw error(previous(), "Expected a variable or function declaration statement");
+    }
 
     // List of statements
     CST statements() {
         auto node = NonTerminalNode::make("_STATEMENTS");
         try {
-            if (auto stmt = assStmnt()) {
+            if (auto stmt = decSign()) {
+                node->add(stmt);
+                return node;
+            }
+            else if (auto stmt = assStmnt()) {
                 node->add(stmt);
                 auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after.");
                 node->add(TerminalNode::make(sc));
+                return node;
             }
-            else if (auto stmt = decStmnt()) {
-                node->add(stmt);
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after.");
-                node->add(TerminalNode::make(sc));
-            }
-
-            return node;
+            throw error(previous(), "Invalid statement.");
         }
         catch (ParseError) {
             node->add(ErrorNode::make(advance(), synchronize()));
@@ -244,6 +289,12 @@ private:
             node->add(nt);
             return node;
         }
+        else if (auto c = match(CHAR_LITERAL)) {
+            auto node = NonTerminalNode::make("OPERAND_LITERAL");
+            node->add(TerminalNode::make(c));
+            return node;
+        }
+
         return nullptr;
     }
 
@@ -361,60 +412,21 @@ private:
         return nullptr;
     }
 
-    // [[ DECLARATION PRODUCTION RULE ]]
-    CST decStmnt() {
-        auto node = NonTerminalNode::make("DEC_STMNT");
-        node->add(mod());
-
-        if (auto dataType = dt()) {
-            node->add(dataType);
-            node->add(assStmnt());
-            return node;
-        }
-        return nullptr;
-    }
-
-    CST mod() {
-        if (auto kw = match(CONST_RESW)) {
-            auto node = NonTerminalNode::make("MOD");
-            node->add(TerminalNode::make(kw));
-            return node;
-        }
-        else if (auto kw = match(STATIC_RESW)) {
-            auto node = NonTerminalNode::make("MOD");
-            node->add(TerminalNode::make(kw));
-            return node;
-        }
-        else if (auto kw = match(CONST_RESW)) {
-            if (auto kwm = match(STATIC_RESW)) {
-                auto node = NonTerminalNode::make("MOD");
-                node->add(TerminalNode::make(kw));
-                node->add(TerminalNode::make(kwm));
-                return node;
-            }
-        }
-        return nullptr;
-    }
-
     // [[ ASSIGNMENT PRODUCTION RULE ]]
     // Basic Assignment Structure
     CST assStmnt() {
-        if (auto list = assList()) {
-            auto node = NonTerminalNode::make("ASS_STMNT");
-            node->add(list);
-            return node;
-        }
-        return nullptr;
-    }
-
-    CST assList() {
         if (auto ass = assSingle()) {
-            auto node = NonTerminalNode::make("ASS_LIST");
+            auto node = NonTerminalNode::make("ASS_STMNT");
             node->add(ass);
 
             while (auto comma = match(COMMA_OP)) {
                 node->add(TerminalNode::make(comma));
-                node->add(assSingle());
+
+                auto ass = assSingle();
+                if (!ass) {
+                    throw error(previous(), "Expected an another assignment expression after comma.");
+                }
+                node->add(ass);
             }
 
             return node;
@@ -426,12 +438,7 @@ private:
         if (auto op = operandId()) {
             auto node = NonTerminalNode::make("ASS_SINGLE");
             node->add(op);
-            if (auto at = assTail()) {
-                node->add(at);
-            }
-            else {
-                throw error(previous(), "Expected an assignment operator after variable.");
-            }
+            node->add(assTail());
             return node;
         }
         else if (auto op = unaryAssOp()) {
@@ -453,6 +460,17 @@ private:
         else if (auto op = unaryAssOp()) {
             auto node = NonTerminalNode::make("ASS_TAIL");
             node->add(op);
+            return node;
+        }
+        throw error(previous(), "Expected an assignment operator after variable.");
+    }
+
+    // [[ DECLARATION PRODUCTION RULE ]]
+    CST decStmnt() {
+        if (auto dataType = dt()) {
+            auto node = NonTerminalNode::make("DEC_STMNT");
+            node->add(dataType);
+            node->add(assStmnt());
             return node;
         }
         return nullptr;
@@ -589,9 +607,13 @@ private:
                 "MODULO_ASS_OP"
             );
         }
-        {
-            throw error(token, "Undefined identifier or keyword");
+        if (token->lexeme()[0] == '\'') {
+            throw error(
+                token, "Non terminated use of ' in a character literal (Example use: 'x' or '1')", "CHAR_LITERAL"
+            );
         }
+
+        throw error(token, "Undefined identifier or keyword");
     }
 
     size_t synchronize() {
@@ -635,6 +657,6 @@ private:
             advance();
         }
 
-        return m_current;
+        return -1;
     }
 };

@@ -74,6 +74,9 @@ void Scanner::scanToken() {
     case '"':
         string();
         break;
+    case '\'':
+        character();
+        break;
     default:
         if (TokenUtils::isDigit(c)) {
             number();
@@ -97,6 +100,19 @@ void Scanner::string() {
     // Skip the last double quote
     advance();
     addToken(STR_LITERAL);
+}
+
+void Scanner::character() {
+    if (TokenUtils::isAlphaNumeric(peek())) {
+        // Consume char
+        advance();
+        if (match('\'')) {
+            addToken(CHAR_LITERAL);
+            return;
+        }
+    }
+
+    addToken(UNKNOWN);
 }
 
 void Scanner::number() {

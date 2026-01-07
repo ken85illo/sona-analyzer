@@ -56,6 +56,7 @@ private:
 
     void scanToken();
     void string();
+    void character();
     void number();
     void specWords();
     void word();

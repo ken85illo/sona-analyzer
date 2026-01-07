@@ -71,7 +71,7 @@ protected:
 
 class ErrorNode : public CSTNode {
 public:
-    ErrorNode(Ref<Token> token, size_t synchronize)
+    ErrorNode(Ref<Token> token, int32_t synchronize)
     : m_line(token->line()), m_synchronize(synchronize) {}
 
     ordered_json toJson() const {
@@ -90,5 +90,5 @@ public:
 private:
     inline static size_t errorIndex = 0;
     const size_t m_line;
-    const size_t m_synchronize;
+    const int64_t m_synchronize;
 };

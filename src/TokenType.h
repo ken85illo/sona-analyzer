@@ -57,6 +57,7 @@ enum TokenType {
     FLT_LITERAL,
     TRUE_LITERAL,
     FALSE_LITERAL,
+    CHAR_LITERAL,
 
     // Keywords
     BREAK_KEYW,
