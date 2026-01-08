@@ -44,6 +44,10 @@ public:
         m_children.push_back(node);
     }
 
+    bool empty() {
+        return m_children.empty();
+    }
+
     static Ref<NonTerminalNode> make(const std::string &name) {
         return MakeRef<NonTerminalNode>(name);
     }

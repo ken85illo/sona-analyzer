@@ -22,18 +22,11 @@ public:
     : m_tokens(tokens) {}
 
     CST parse() {
-        auto node = NonTerminalNode::make("_BODY");
-        while (!isAtEnd()) {
-            if (auto stmt = statements()) {
-                node->add(stmt);
-            }
-        }
-        return node;
+        return body();
     }
 
-    const TokenVec &m_tokens;
-
 private:
+    const TokenVec &m_tokens;
     int64_t m_current = 0;
 
     /* ================= Grammar ================= */
@@ -88,26 +81,48 @@ private:
         });
     }
 
-    // List of statements
-    CST statements() {
+    // Body
+    CST body() {
         try {
-            return tryParse("_STATEMENTS", [&](auto node) {
-                if (auto stmt = decSign()) {
+            return tryParse("_BODY", [&](auto node) {
+                while (auto stmt = statements()) {
                     node->add(stmt);
-                    return true;
+
+                    if (isAtEnd()) {
+                        break;
+                    }
                 }
-                else if (auto stmt = assStmnt()) {
-                    node->add(stmt);
-                    auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after.");
-                    node->add(TerminalNode::make(sc));
-                    return true;
+
+                if (node->empty()) {
+                    node->add(EpsilonNode::make());
                 }
-                throw error(previous(), "Invalid statement.");
+                return true;
             });
         }
         catch (ParseError &error) {
             return error.node;
         }
+    }
+
+    // List of statements
+    CST statements() {
+        return tryParse("_STATEMENTS", [&](auto node) {
+            if (auto stmt = decSign()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = assStmnt()) {
+                node->add(stmt);
+                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after.");
+                node->add(TerminalNode::make(sc));
+                return true;
+            }
+            else if (auto stmt = condStmnt()) {
+                node->add(stmt);
+                return true;
+            }
+            return false;
+        });
     }
 
     // Naming Identifiers
@@ -563,10 +578,98 @@ private:
         });
     }
 
+    // [[ CONDITIONAL PRODUCTION RULE ]]
+
+    // Conditional Statements Production Rule
+    CST condStmnt() {
+        return tryParse("COND_STMNT", [&](auto node) {
+            if (auto nt = ifStmnt()) {
+                node->add(nt);
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST ifStmnt() {
+        return tryParse("IF_STMNT", [&](auto node) {
+            if (auto ifkw = match(IF_RESW)) {
+                node->add(TerminalNode::make(ifkw));
+
+                auto leftParen = consume(LEFT_PAREN_DELIM, "Expected an opening parenthesis '(' after 'if' statement.");
+                node->add(TerminalNode::make(leftParen));
+                node->add(expression());
+
+                auto rightParen =
+                    consume(RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after an 'if' expression.");
+                node->add(TerminalNode::make(rightParen));
+
+                auto leftCurly =
+                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' for an 'if' body statement.");
+                node->add(TerminalNode::make(leftCurly));
+
+                node->add(body());
+
+                auto rightCurly =
+                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' for an 'if' body statement.");
+                node->add(TerminalNode::make(rightCurly));
+
+                node->add(elseStmnt());
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST elseStmnt() {
+        return tryParse("ELSE_STMNT", [&](auto node) {
+            if (auto elifRw = match(ELIF_RESW)) {
+                node->add(TerminalNode::make(elifRw));
+
+                auto leftParen =
+                    consume(LEFT_PAREN_DELIM, "Expected an opening parenthesis '(' after 'elif' statement.");
+                node->add(TerminalNode::make(leftParen));
+                node->add(expression());
+
+                auto rightParen =
+                    consume(RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after an 'elif' expression.");
+                node->add(TerminalNode::make(rightParen));
+
+                auto leftCurly =
+                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' for an 'elif' body statement.");
+                node->add(TerminalNode::make(leftCurly));
+
+                node->add(body());
+
+                auto rightCurly =
+                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' for an 'elif' body statement.");
+                node->add(TerminalNode::make(rightCurly));
+
+                node->add(elseStmnt());
+            }
+            else if (auto elseRw = match(ELSE_RESW)) {
+                auto leftCurly =
+                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' for an 'else' body statement.");
+                node->add(TerminalNode::make(leftCurly));
+
+                node->add(body());
+
+                auto rightCurly =
+                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' for an 'else' body statement.");
+                node->add(TerminalNode::make(rightCurly));
+
+                node->add(elseStmnt());
+            }
+            else {
+                node->add(EpsilonNode::make());
+            }
+            return true;
+        });
+    }
     /* ================= Helpers ================= */
 
     template <typename Func>
-    CST tryParse(const std::string &nodeName, Func fn) {
+    ::CST tryParse(const std::string &nodeName, Func fn) {
         auto node = NonTerminalNode::make(nodeName);
 
         try {
