@@ -20,7 +20,7 @@ public:
     : m_name(name) {}
 
     ordered_json toJson(const std::string &path = "") const override {
-        std::string currentPath = path.empty() ? m_name : path + ">" + m_name;
+        std::string currentPath = path.empty() ? m_name : path + "|" + m_name;
 
         ordered_json result = ordered_json::array();
 

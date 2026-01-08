@@ -669,7 +669,7 @@ private:
     /* ================= Helpers ================= */
 
     template <typename Func>
-    ::CST tryParse(const std::string &nodeName, Func fn) {
+    CST tryParse(const std::string &nodeName, Func fn) {
         auto node = NonTerminalNode::make(nodeName);
 
         try {
@@ -770,69 +770,53 @@ private:
 
         // Handle lexical unknown tokens
         if (token->lexeme() == "++") {
-            throw error(
-                token, "Invalid use of increment operator (it should be with a defined identifier).", "INCREMNT_OP"
-            );
+            throw error(token, "Expected an identifier paired with the operator.", "INCREMNT_OP");
         }
         if (token->lexeme() == "--") {
-            throw error(
-                token, "Invalid use of decrement operator (it should be with a defined identifier).", "DECREMNT_OP"
-            );
+            throw error(token, "Expected an identifier paired with the operator.", "DECREMNT_OP");
         }
         if (token->lexeme() == "-") {
-            throw error(token, "Invalid use of negation or subtract(binary) operator.", "MINUS_OP");
+            throw error(token, "Expected to be used as a unary(negation) or binary(subtract) operator.", "MINUS_OP");
         }
         if (token->lexeme() == "+") {
-            throw error(token, "Invalid use of positive or addition(binary) operator.", "PLUS_OP");
+            throw error(token, "Expected to be used as a unary(positive) or binary(addition) operator.", "PLUS_OP");
         }
         if (token->lexeme() == "*") {
-            throw error(token, "Invalid use of multiply(binary) operator.", "MULTIPLY_OP");
+            throw error(token, "Expected to be used as a binary(multiplication) operator.", "MULTIPLY_OP");
         }
         if (token->lexeme() == "/") {
-            throw error(token, "Invalid use of divide(binary) operator.", "DIVIDE_OP");
+            throw error(token, "Expected to be used as a binary(division) operator.", "DIVIDE_OP");
         }
         if (token->lexeme() == "%") {
-            throw error(token, "Invalid use of modulo(binary) operator.", "MODULO_OP");
+            throw error(token, "Expected to be used as a binary(modulo) operator.", "MODULO_OP");
         }
         if (token->lexeme() == "+=") {
-            throw error(token, "Invalid use of addition assignment operator (Example use: x += 1)", "ADD_ASS_OP");
+            throw error(
+                token, "Invalid use of addition assignment operator (Example: x += <expression>)", "ADD_ASS_OP"
+            );
         }
         if (token->lexeme() == "-=") {
             throw error(
-                token,
-                "Invalid use of subtract assignment operator (Example use: x += 2)"
-                "to assign).",
-                "SUBTRCT_ASS_OP"
+                token, "Invalid use of subtract assignment operator (Example: x -= <expression>)", "SUBTRCT_ASS_OP"
             );
         }
         if (token->lexeme() == "*=") {
             throw error(
-                token,
-                "Invalid use of multiply assignment operator (it should be used with a defined identifier and  a value "
-                "to assign).",
-                "MULTPLY_ASS_OP"
+                token, "Invalid use of multiply assignment operator (Example: x *= <expression>)", "MULTPLY_ASS_OP"
             );
         }
         if (token->lexeme() == "/=") {
             throw error(
-                token,
-                "Invalid use of divide assignment operator (it should be used with a defined identifier and  a value "
-                "to assign).",
-                "DIVIDE_ASS_OP"
+                token, "Invalid use of divide assignment operator (Example: x /= <expression>)", "DIVIDE_ASS_OP"
             );
         }
         if (token->lexeme() == "%=") {
             throw error(
-                token,
-                "Invalid use of modulo assignment operator (it should be used with a defined identifier and  a value "
-                "to assign).",
-                "MODULO_ASS_OP"
+                token, "Invalid use of modulo assignment operator (Example: x %= <expression>)", "MODULO_ASS_OP"
             );
         }
         if (token->lexeme()[0] == '\'') {
-            throw error(
-                token, "Non terminated use of ' in a character literal (Example use: 'x' or '1')", "CHAR_LITERAL"
-            );
+            throw error(token, "Non terminated ' in a character literal (Example: 'x' or '1')", "CHAR_LITERAL");
         }
 
         throw error(token, "Undefined identifier or keyword");
