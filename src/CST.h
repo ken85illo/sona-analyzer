@@ -45,6 +45,7 @@ public:
 private:
     std::string m_name;
     std::vector<CST> m_children;
+    inline static Ref<NonTerminalNode> s_track;
 };
 
 class TerminalNode : public CSTNode {
@@ -91,10 +92,10 @@ public:
 
     ordered_json toJson() const {
         return ordered_json{
-            {        "type",       "error" },
-            {        "line",        m_line },
-            {       "index",  errorIndex++ },
-            { "synchronize", m_synchronize }
+            {        "type",                "error" },
+            {        "line",                 m_line },
+            {       "index", s_errorIndex[m_line]++ },
+            { "synchronize",          m_synchronize }
         };
     }
 
@@ -103,7 +104,7 @@ public:
     }
 
 private:
-    inline static size_t errorIndex = 0;
+    inline static std::unordered_map<size_t, size_t> s_errorIndex;
     const size_t m_line;
     const int64_t m_synchronize;
 };
