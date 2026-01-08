@@ -49,7 +49,7 @@ private:
 
 class TerminalNode : public CSTNode {
 public:
-    TerminalNode(Ref<Token> token)
+    TerminalNode(const Ref<Token> &token)
     : m_lexeme(token->lexeme()), m_tokenType(token->typeString()) {}
 
     ordered_json toJson() const override {
@@ -60,18 +60,33 @@ public:
         };
     }
 
-    static Ref<TerminalNode> make(Ref<Token> token) {
+    static Ref<TerminalNode> make(const Ref<Token> &token) {
         return MakeRef<TerminalNode>(token);
     }
 
-protected:
+private:
     std::string m_lexeme;
     std::string m_tokenType;
 };
 
+class EpsilonNode : public CSTNode {
+public:
+    EpsilonNode() {}
+
+    ordered_json toJson() const override {
+        return ordered_json{
+            { "type", "epsilon" },
+        };
+    }
+
+    static Ref<EpsilonNode> make() {
+        return MakeRef<EpsilonNode>();
+    }
+};
+
 class ErrorNode : public CSTNode {
 public:
-    ErrorNode(Ref<Token> token, int32_t synchronize)
+    ErrorNode(const Ref<Token> &token, int32_t synchronize)
     : m_line(token->line()), m_synchronize(synchronize) {}
 
     ordered_json toJson() const {
@@ -83,7 +98,7 @@ public:
         };
     }
 
-    static Ref<ErrorNode> make(Ref<Token> token, size_t synchronize) {
+    static Ref<ErrorNode> make(const Ref<Token> &token, size_t synchronize) {
         return MakeRef<ErrorNode>(token, synchronize);
     }
 

@@ -32,25 +32,26 @@ private:
 
     // Global + Data Type
     CST mod() {
+        auto bt = m_current;
+        auto node = NonTerminalNode::make("MOD");
+
         if (auto kw = match(CONST_RESW)) {
             if (auto kwm = match(STATIC_RESW)) {
-                auto node = NonTerminalNode::make("MOD");
                 node->add(TerminalNode::make(kw));
                 node->add(TerminalNode::make(kwm));
-                return node;
             }
+            m_current = bt;
         }
         else if (auto kw = match(CONST_RESW)) {
-            auto node = NonTerminalNode::make("MOD");
             node->add(TerminalNode::make(kw));
-            return node;
         }
         else if (auto kw = match(STATIC_RESW)) {
-            auto node = NonTerminalNode::make("MOD");
             node->add(TerminalNode::make(kw));
-            return node;
         }
-        return nullptr;
+        else {
+            node->add(EpsilonNode::make());
+        }
+        return node;
     }
 
     CST decSign() {
@@ -102,7 +103,6 @@ private:
     CST id() {
         if (auto ident = match(IDENTIFIER)) {
             auto node = NonTerminalNode::make("ID");
-            node->add(TerminalNode::make(ident));
             return node;
         }
         return nullptr;
@@ -176,7 +176,7 @@ private:
             return node;
         }
 
-        throw error(peek(), "Expected an expression.");
+        throw error(previous(), "Expected an expression after.");
     }
 
     // Operators
@@ -309,15 +309,17 @@ private:
     }
 
     CST idSuffix() {
+        auto node = NonTerminalNode::make("ID_SUFFIX");
         if (auto leftSquare = match(LEFT_SQUARE_DELIM)) {
-            auto node = NonTerminalNode::make("ID_SUFFIX");
             node->add(TerminalNode::make(leftSquare));
             node->add(expression());
             auto rightSquare = consume(RIGHT_SQUARE_DELIM, "Expected ']' after expression");
             node->add(TerminalNode::make(rightSquare));
-            return node;
         }
-        return nullptr;
+        else {
+            node->add(EpsilonNode::make());
+        }
+        return node;
     }
 
     // Data types
@@ -353,7 +355,7 @@ private:
             auto node = NonTerminalNode::make("NUMBER");
 
             node->add(TerminalNode::make(op));
-            auto operand = consume(INT_LITERAL, "Expect an expression after POSITIVE_OP");
+            auto operand = match(INT_LITERAL);
             node->add(TerminalNode::make(operand));
             return node;
         }
@@ -361,7 +363,7 @@ private:
             auto node = NonTerminalNode::make("NUMBER");
 
             node->add(TerminalNode::make(op));
-            auto operand = consume(INT_LITERAL, "Expect an expression after NEGATIVE_OP");
+            auto operand = match(INT_LITERAL);
             node->add(TerminalNode::make(operand));
             return node;
         }
@@ -379,7 +381,7 @@ private:
             auto node = NonTerminalNode::make("REAL_NUM");
 
             node->add(TerminalNode::make(op));
-            auto operand = consume(FLT_LITERAL, "Expect an expression after POSITIVE_OP");
+            auto operand = match(FLT_LITERAL);
             node->add(TerminalNode::make(operand));
             return node;
         }
@@ -387,7 +389,7 @@ private:
             auto node = NonTerminalNode::make("REAL_NUM");
 
             node->add(TerminalNode::make(op));
-            auto operand = consume(FLT_LITERAL, "Expect an expression after NEGATIVE_OP");
+            auto operand = match(FLT_LITERAL);
             node->add(TerminalNode::make(operand));
             return node;
         }
@@ -421,12 +423,7 @@ private:
 
             while (auto comma = match(COMMA_OP)) {
                 node->add(TerminalNode::make(comma));
-
-                auto ass = assSingle();
-                if (!ass) {
-                    throw error(previous(), "Expected an another assignment expression after comma.");
-                }
-                node->add(ass);
+                node->add(checkAdd(assSingle(), previous(), "Expected another assignment expression after comma."));
             }
 
             return node;
@@ -451,29 +448,96 @@ private:
     }
 
     CST assTail() {
+        auto node = NonTerminalNode::make("ASS_TAIL");
         if (auto op = assOp()) {
-            auto node = NonTerminalNode::make("ASS_TAIL");
             node->add(op);
             node->add(expression());
-            return node;
         }
         else if (auto op = unaryAssOp()) {
-            auto node = NonTerminalNode::make("ASS_TAIL");
             node->add(op);
-            return node;
         }
-        throw error(previous(), "Expected an assignment operator after variable.");
+        else {
+            node->add(EpsilonNode::make());
+        }
+        return node;
     }
 
     // [[ DECLARATION PRODUCTION RULE ]]
     CST decStmnt() {
-        if (auto dataType = dt()) {
+        if (auto ident = id()) {
             auto node = NonTerminalNode::make("DEC_STMNT");
-            node->add(dataType);
-            node->add(assStmnt());
+            node->add(ident);
+            node->add(decTail());
+
+            while (auto comma = match(COMMA_OP)) {
+                node->add(TerminalNode::make(comma));
+                node->add(checkAdd(id(), previous(), "Expected another assignment expression after comma."));
+            }
+
             return node;
         }
         return nullptr;
+    }
+
+    CST decTail() {
+        auto node = NonTerminalNode::make("DEC_TAIL");
+        if (auto tail = arrSuffix()) {
+            node->add(tail);
+        }
+        else {
+            node->add(varTail());
+        }
+        return node;
+    }
+
+    CST varTail() {
+        auto node = NonTerminalNode::make("VAR_TAIL");
+        if (auto ass = match(EQUAL_ASS_OP)) {
+            node->add(TerminalNode::make(ass));
+            node->add(expression());
+        }
+        else {
+            node->add(EpsilonNode::make());
+        }
+        return node;
+    }
+
+    CST arrSuffix() {
+        if (auto leftSquare = match(LEFT_SQUARE_DELIM)) {
+            auto node = NonTerminalNode::make("ARR_SUFFIX");
+            node->add(TerminalNode::make(leftSquare));
+            node->add(expression());
+            auto rightSquare = consume(RIGHT_SQUARE_DELIM, "Expected a closing square bracket ']'.");
+            node->add(TerminalNode::make(rightSquare));
+            node->add(arrTail());
+            return node;
+        }
+        return nullptr;
+    }
+
+    CST arrTail() {
+        auto node = NonTerminalNode::make("ARR_TAIL");
+        if (auto equal = match(EQUAL_ASS_OP)) {
+            node->add(TerminalNode::make(equal));
+
+            auto leftCurly = consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' when declaring arrays.");
+            node->add(TerminalNode::make(leftCurly));
+
+            node->add(TerminalNode::make(leftCurly));
+            node->add(checkAdd(operand(), previous(), "Expected an operand after left curly brace '{'."));
+
+            while (auto comma = match(COMMA_OP)) {
+                node->add(TerminalNode::make(comma));
+                node->add(checkAdd(operand(), previous(), "Expected an operand after comma."));
+            }
+
+            auto rightCurly = consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}'.");
+            node->add(TerminalNode::make(rightCurly));
+        }
+        else {
+            node->add(EpsilonNode::make());
+        }
+        return node;
     }
 
     /* ================= Helpers ================= */
@@ -489,10 +553,11 @@ private:
         throw error(peek(), message);
     }
 
-    ParseError
-    error(Ref<Token> token, const std::string &message, std::optional<std::string> tokenString = std::nullopt) {
+    ParseError error(
+        const Ref<Token> &token, const std::string &message,
+        const std::optional<std::string> &tokenString = std::nullopt
+    ) {
         ::error(token, message, tokenString);
-        synchronize();
         return ParseError("");
     }
 
@@ -512,6 +577,13 @@ private:
             return false;
         }
         return peek()->type() == type;
+    }
+
+    CST checkAdd(const CST &cst, const Ref<Token> &token, const std::string &message) {
+        if (!cst) {
+            throw error(token, message);
+        }
+        return cst;
     }
 
     Ref<Token> advance() {
@@ -541,7 +613,7 @@ private:
         return m_tokens[m_current - 1];
     }
 
-    void validateToken(Ref<Token> token) {
+    void validateToken(const Ref<Token> &token) {
         if (token->type() != UNKNOWN) {
             return;
         }
@@ -616,7 +688,7 @@ private:
         throw error(token, "Undefined identifier or keyword");
     }
 
-    size_t synchronize() {
+    int64_t synchronize() {
         advance();
 
         while (!isAtEnd()) {
