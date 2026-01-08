@@ -11,7 +11,7 @@ using CST = std::shared_ptr<CSTNode>;
 class CSTNode {
 public:
     virtual ~CSTNode() = default;
-    virtual ordered_json toJson() const = 0;
+    virtual ordered_json toJson(const std::string &path = "") const = 0;
 };
 
 class NonTerminalNode : public CSTNode {
@@ -19,19 +19,25 @@ public:
     explicit NonTerminalNode(const std::string &name)
     : m_name(name) {}
 
-    ordered_json toJson() const override {
-        ordered_json j;
-        j["type"] = "non_terminal";
-        j["name"] = m_name;
-        j["children"] = ordered_json::array();
+    ordered_json toJson(const std::string &path = "") const override {
+        std::string currentPath = path.empty() ? m_name : path + ">" + m_name;
+
+        ordered_json result = ordered_json::array();
 
         for (const auto &child: m_children) {
-            if (child != nullptr) {
-                j["children"].push_back(child->toJson());
+            auto childJson = child->toJson(currentPath);
+
+            if (childJson.is_array()) {
+                for (auto &elem: childJson) {
+                    result.push_back(elem);
+                }
+            }
+            else {
+                result.push_back(childJson);
             }
         }
 
-        return j;
+        return result;
     }
 
     void add(CST node) {
@@ -53,11 +59,12 @@ public:
     TerminalNode(const Ref<Token> &token)
     : m_lexeme(token->lexeme()), m_tokenType(token->typeString()) {}
 
-    ordered_json toJson() const override {
+    ordered_json toJson(const std::string &path = "") const override {
         return ordered_json{
-            {       "type",  "terminal" },
-            {     "lexeme",    m_lexeme },
-            { "token_type", m_tokenType }
+            {          "type",  "terminal" },
+            {        "lexeme",    m_lexeme },
+            {    "token_type", m_tokenType },
+            { "non_terminals",        path }
         };
     }
 
@@ -74,9 +81,10 @@ class EpsilonNode : public CSTNode {
 public:
     EpsilonNode() {}
 
-    ordered_json toJson() const override {
+    ordered_json toJson(const std::string &path = "") const override {
         return ordered_json{
-            { "type", "epsilon" },
+            {          "type", "epsilon" },
+            { "non_terminals",      path }
         };
     }
 
@@ -90,12 +98,13 @@ public:
     ErrorNode(const Ref<Token> &token, int32_t synchronize)
     : m_line(token->line()), m_synchronize(synchronize) {}
 
-    ordered_json toJson() const {
+    ordered_json toJson(const std::string &path = "") const {
         return ordered_json{
-            {        "type",                "error" },
-            {        "line",                 m_line },
-            {       "index", s_errorIndex[m_line]++ },
-            { "synchronize",          m_synchronize }
+            {          "type",                "error" },
+            {          "line",                 m_line },
+            {         "index", s_errorIndex[m_line]++ },
+            {   "synchronize",          m_synchronize },
+            { "non_terminals",                   path }
         };
     }
 

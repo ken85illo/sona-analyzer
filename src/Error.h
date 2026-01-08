@@ -8,7 +8,7 @@ static ordered_json errors;
 
 static void report(size_t line, const std::string &where, const std::string &message) {
     std::stringstream ss;
-    ss << "[LINE " << line << "] Error" << where << ": " << message;
+    ss << "Error" << where << ": " << message;
     errors[std::to_string(line)].push_back(ss.str());
 }
 
