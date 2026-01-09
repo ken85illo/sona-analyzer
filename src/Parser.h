@@ -121,6 +121,10 @@ private:
                 node->add(stmt);
                 return true;
             }
+            else if (auto stmt = iterativeStmt()) {
+                node->add(stmt);
+                return true;
+            }
             return false;
         });
     }
@@ -596,22 +600,25 @@ private:
             if (auto ifkw = match(IF_RESW)) {
                 node->add(TerminalNode::make(ifkw));
 
-                auto leftParen = consume(LEFT_PAREN_DELIM, "Expected an opening parenthesis '(' after 'if' statement.");
+                auto leftParen = consume(
+                    LEFT_PAREN_DELIM,
+                    "Expected an opening parenthesis '(' after 'if' keyword as a start of conditional expression."
+                );
                 node->add(TerminalNode::make(leftParen));
                 node->add(expression());
 
                 auto rightParen =
-                    consume(RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after an 'if' expression.");
+                    consume(RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after 'if' expression.");
                 node->add(TerminalNode::make(rightParen));
 
                 auto leftCurly =
-                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' for an 'if' body statement.");
+                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' before 'if' body statement.");
                 node->add(TerminalNode::make(leftCurly));
 
                 node->add(body());
 
                 auto rightCurly =
-                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' for an 'if' body statement.");
+                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after 'if' body statement.");
                 node->add(TerminalNode::make(rightCurly));
 
                 node->add(elseStmnt());
@@ -621,41 +628,44 @@ private:
         });
     }
 
+    // Else / Elif Statements
     CST elseStmnt() {
         return tryParse("ELSE_STMNT", [&](auto node) {
             if (auto elifRw = match(ELIF_RESW)) {
                 node->add(TerminalNode::make(elifRw));
 
-                auto leftParen =
-                    consume(LEFT_PAREN_DELIM, "Expected an opening parenthesis '(' after 'elif' statement.");
+                auto leftParen = consume(
+                    LEFT_PAREN_DELIM,
+                    "Expected an opening parenthesis '(' after 'elif' keyword as a start of conditional expression."
+                );
                 node->add(TerminalNode::make(leftParen));
                 node->add(expression());
 
                 auto rightParen =
-                    consume(RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after an 'elif' expression.");
+                    consume(RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after 'elif' expression.");
                 node->add(TerminalNode::make(rightParen));
 
                 auto leftCurly =
-                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' for an 'elif' body statement.");
+                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' before 'elif' body statement.");
                 node->add(TerminalNode::make(leftCurly));
 
                 node->add(body());
 
                 auto rightCurly =
-                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' for an 'elif' body statement.");
+                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after 'elif' body statement.");
                 node->add(TerminalNode::make(rightCurly));
 
                 node->add(elseStmnt());
             }
             else if (auto elseRw = match(ELSE_RESW)) {
                 auto leftCurly =
-                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' for an 'else' body statement.");
+                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' before 'else' body statement.");
                 node->add(TerminalNode::make(leftCurly));
 
                 node->add(body());
 
                 auto rightCurly =
-                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' for an 'else' body statement.");
+                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after 'else' body statement.");
                 node->add(TerminalNode::make(rightCurly));
 
                 node->add(elseStmnt());
@@ -666,6 +676,203 @@ private:
             return true;
         });
     }
+
+    // [[ Iterative Production Rule ]]
+
+    // Iterative Loop Statement Production Rule
+    CST iterativeStmt() {
+        return tryParse("ITERATIVE_STMT", [&](auto node) {
+            if (auto stmt = whileStmt()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = doWhileStmt()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = forStmt()) {
+                node->add(stmt);
+                return true;
+            }
+
+            return false;
+        });
+    }
+
+    // While
+    CST whileStmt() {
+        return tryParse("WHILE_STMT", [&](auto node) {
+            if (auto whileKw = match(WHILE_KEYW)) {
+                node->add(TerminalNode::make(whileKw));
+
+                auto leftParen = consume(
+                    LEFT_PAREN_DELIM,
+                    "Expected an opening parenthesis '(' after 'while' keyword as a start of conditional expression."
+                );
+                node->add(TerminalNode::make(leftParen));
+                node->add(expression());
+
+                auto rightParen = consume(
+                    RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after 'while' conditional expression."
+                );
+                node->add(TerminalNode::make(rightParen));
+
+                auto leftCurly =
+                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' before 'while' body statement.");
+                node->add(TerminalNode::make(leftCurly));
+
+                node->add(body());
+
+                auto rightCurly =
+                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after 'while' body statement.");
+                node->add(TerminalNode::make(rightCurly));
+                return true;
+            }
+            return false;
+        });
+    }
+
+    // Do-While
+    CST doWhileStmt() {
+        return tryParse("DO_WHILE_STMT", [&](auto node) {
+            if (auto doKw = match(DO_KEYW)) {
+                node->add(TerminalNode::make(doKw));
+
+                auto leftCurly =
+                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' before 'do while' body statement.");
+                node->add(TerminalNode::make(leftCurly));
+
+                node->add(body());
+
+                auto rightCurly =
+                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after 'do while' body statement.");
+
+                node->add(TerminalNode::make(rightCurly));
+
+                auto leftParen = consume(
+                    LEFT_PAREN_DELIM,
+                    "Expected an opening parenthesis '(' after 'do while' as a start of conditional expression."
+                );
+
+                node->add(TerminalNode::make(leftParen));
+                node->add(expression());
+
+                auto rightParen = consume(
+                    RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after 'do while' conditional expression."
+                );
+                node->add(TerminalNode::make(rightParen));
+
+                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after a 'do while' body statement");
+                node->add(TerminalNode::make(sc));
+
+                return true;
+            }
+            return false;
+        });
+    }
+
+    // For
+    CST forStmt() {
+        return tryParse("FOR_STMT", [&](auto node) {
+            if (auto forKw = match(FOR_KEYW)) {
+                node->add(TerminalNode::make(forKw));
+
+                auto leftParen = consume(
+                    LEFT_PAREN_DELIM,
+                    "Expected an opening parenthesis '(' after 'for' keyword as a start of for statement expression."
+                );
+                node->add(TerminalNode::make(leftParen));
+
+                node->add(forInit());
+                auto scFirst = consume(SEMICOLON_DELIM, "Expected a semicolon ';' after for init expression.");
+                node->add(TerminalNode::make(scFirst));
+
+                node->add(expression());
+                auto scSecond = consume(SEMICOLON_DELIM, "Expected a semicolon ';' after for condition expression.");
+                node->add(TerminalNode::make(scSecond));
+
+                node->add(forCounter());
+
+                auto rightParen =
+                    consume(RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after 'for' statement expression.");
+                node->add(TerminalNode::make(rightParen));
+
+                auto leftCurly =
+                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' before 'for' body statement.");
+                node->add(TerminalNode::make(leftCurly));
+
+                node->add(body());
+
+                auto rightCurly =
+                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after 'for' body statement.");
+                node->add(TerminalNode::make(rightCurly));
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST forInit() {
+        return tryParse("FOR_INIT", [&](auto node) {
+            if (auto type = dt()) {
+                node->add(type);
+                node->add(
+                    checkAdd(forDec(), previous(), "Expected an identifier in 'for' init declaration statement.")
+                );
+
+                while (auto comma = match(COMMA_OP)) {
+                    node->add(TerminalNode::make(comma));
+                    node->add(checkAdd(
+                        forDec(), previous(),
+                        "Expected another declaration in 'for' init declaration statement after comma ','"
+                    ));
+                }
+            }
+            else {
+                node->add(EpsilonNode::make());
+            }
+
+            return true;
+        });
+    }
+
+    CST forDec() {
+        return tryParse("FOR_DEC", [&](auto node) {
+            if (auto ident = id()) {
+                node->add(ident);
+                node->add(forDecTail());
+                return true;
+            }
+
+            return false;
+        });
+    }
+
+    CST forDecTail() {
+        return tryParse("FOR_DEC_TAIL", [&](auto node) {
+            if (auto equal = match(EQUAL_ASS_OP)) {
+                node->add(TerminalNode::make(equal));
+                node->add(expression());
+            }
+            else {
+                node->add(EpsilonNode::make());
+            }
+            return true;
+        });
+    }
+
+    CST forCounter() {
+        return tryParse("FOR_DEC_TAIL", [&](auto node) {
+            if (auto stmt = assStmnt()) {
+                node->add(stmt);
+            }
+            else {
+                node->add(EpsilonNode::make());
+            }
+            return true;
+        });
+    }
+
     /* ================= Helpers ================= */
 
     template <typename Func>
