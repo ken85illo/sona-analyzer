@@ -227,7 +227,7 @@ private:
     }
 
     CST relOp() {
-        return tryParse("ADD_OP", [&](auto node) {
+        return tryParse("REL_OP", [&](auto node) {
             if (auto op = match(
                     EQUAL_REL_OP, NOT_EQUAL_REL_OP, LESS_REL_OP, GREATER_REL_OP, LESS_EQUAL_REL_OP, GREATER_EQUAL_REL_OP
                 )) {
@@ -316,7 +316,7 @@ private:
     }
 
     CST operandLiteral() {
-        return tryParse("OPERAND_ID", [&](auto node) {
+        return tryParse("OPERAND_LITERAL", [&](auto node) {
             if (auto nt = number()) {
                 node->add(nt);
                 return true;
@@ -862,7 +862,7 @@ private:
     }
 
     CST forCounter() {
-        return tryParse("FOR_DEC_TAIL", [&](auto node) {
+        return tryParse("FOR_COUNTER", [&](auto node) {
             if (auto stmt = assStmnt()) {
                 node->add(stmt);
             }
@@ -872,6 +872,8 @@ private:
             return true;
         });
     }
+
+    // [[ FUNCITON PRODUCTION RULE ]]
 
     /* ================= Helpers ================= */
 
