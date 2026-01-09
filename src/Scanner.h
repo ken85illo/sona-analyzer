@@ -45,7 +45,7 @@ private:
     const std::string m_source;
 
     TokenVec m_tokens;
-    TokenSet m_userDefinedTokens;
+    TokenMap m_userDefinedTokens;
     IdSet m_idsDefined{ "readChar", "readLine", "print", "parseInt", "parseString", "exit", "x" };
 
     size_t m_start = 0;
@@ -66,11 +66,15 @@ private:
         m_tokens.push_back(std::make_shared<DefToken>(type, text, line.value_or(m_line)));
     }
 
-    void addUserDefinedToken() {
+    void addUserDefinedToken(TokenType previous) {
         std::string text = TokenUtils::substring(m_start, m_current, m_source);
-        m_userDefinedTokens.insert(text);
 
-        m_tokens.push_back(std::make_shared<UserToken>(text, m_line));
+        if (!m_userDefinedTokens.contains(text)) {
+            TokenType type = (previous == STRUCT_TYPE_RESW) ? USER_STRUCT_RESW : USER_MACHINE_RESW;
+            m_userDefinedTokens[text] = type;
+        }
+
+        m_tokens.push_back(std::make_shared<UserToken>(m_userDefinedTokens[text], text, m_line));
     }
 
     void addIdentifier() {
@@ -211,8 +215,7 @@ private:
         if (m_tokens.empty()) {
             return false;
         }
-        return m_userDefinedTokens.find(m_tokens.back()->lexeme()) != m_userDefinedTokens.end() ||
-               lastToken() == MAC_STATE_RESW;
+        return m_userDefinedTokens.contains(m_tokens.back()->lexeme()) || lastToken() == MAC_STATE_RESW;
     }
 
     bool validIdentifier() {

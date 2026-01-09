@@ -50,11 +50,11 @@ private:
 
 class UserToken : public Token {
 public:
-    UserToken(const std::string &lexeme, size_t line)
-    : Token(lexeme, line) {}
+    UserToken(TokenType type, const std::string &lexeme, size_t line)
+    : Token(lexeme, line), m_type(type) {}
 
     TokenType type() override {
-        return USER_DEFINED_RESW;
+        return m_type;
     }
 
     void setType(TokenType type) override {
@@ -64,8 +64,11 @@ public:
     std::string typeString() override {
         return TokenUtils::getTypeName(m_lexeme);
     }
+
+private:
+    const TokenType m_type;
 };
 
 using TokenRef = std::shared_ptr<Token>;
 using TokenVec = std::vector<TokenRef>;
-using TokenSet = std::unordered_set<std::string>;
+using TokenMap = std::unordered_map<std::string, TokenType>;

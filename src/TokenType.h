@@ -100,5 +100,6 @@ enum TokenType {
     UNKNOWN,
 
     // User Defined token
-    USER_DEFINED_RESW,
+    USER_MACHINE_RESW,
+    USER_STRUCT_RESW,
 };

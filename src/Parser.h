@@ -873,7 +873,7 @@ private:
         });
     }
 
-    // [[ FUNCITON PRODUCTION RULE ]]
+    // [[ FUNCTION PRODUCTION RULE ]]
 
     /* ================= Helpers ================= */
 

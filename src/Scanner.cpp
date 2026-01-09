@@ -153,7 +153,7 @@ void Scanner::word() {
         addToken(specialWords.at(text));
     }
     else if (isUserDefinedType) {
-        addUserDefinedToken();
+        addUserDefinedToken(prevToken);
     }
     else if (isIdentifier) {
         addIdentifier();
