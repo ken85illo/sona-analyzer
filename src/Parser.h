@@ -41,7 +41,9 @@ private:
                     node->add(TerminalNode::make(kw));
                     node->add(TerminalNode::make(kwm));
                 }
-                m_current = bt;
+                else {
+                    m_current = bt;
+                }
             }
             else if (auto kw = match(CONST_RESW)) {
                 node->add(TerminalNode::make(kw));
@@ -107,7 +109,16 @@ private:
     // List of statements
     CST statements() {
         return tryParse("_STATEMENTS", [&](auto node) {
-            if (auto stmt = decSign()) {
+            // Skip all line comment and multiline comments
+            while (check(LINE_COMNT) || check(MULTILINE_COMNT)) {
+                advance();
+            }
+
+            if (auto stmt = funcCall()) { // Must be called before assignment stmnt (both <id> first)
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = decSign()) {
                 node->add(stmt);
                 return true;
             }
@@ -130,9 +141,9 @@ private:
     }
 
     // Naming Identifiers
-    CST id() {
+    CST id(TokenType type = IDENTIFIER) {
         return tryParse("ID", [&](auto node) {
-            if (auto ident = match(IDENTIFIER)) {
+            if (auto ident = match(type)) {
                 node->add(TerminalNode::make(ident));
                 return true;
             }
@@ -874,6 +885,162 @@ private:
     }
 
     // [[ FUNCTION PRODUCTION RULE ]]
+
+    // Function Declarations
+    CST funcStmnt() {
+        return tryParse("FUNC_STMNT", [&](auto node) {
+            if (auto ident = id()) {
+                node->add(ident);
+                auto leftParen = consume(
+                    LEFT_PAREN_DELIM,
+                    "Expected an opening parenthesis '(' after a function declaration as a start fo parameter list."
+                );
+
+                node->add(TerminalNode::make(leftParen));
+                node->add(paramList());
+
+                auto rightParen = consume(
+                    LEFT_PAREN_DELIM, "Expected a closing parenthesis '(' after  function declaration parameter list."
+                );
+
+                node->add(TerminalNode::make(rightParen));
+                node->add(funcStmtSuffix());
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST funcStmtSuffix() {
+        return tryParse("FUNC_STMT_SUFFIX", [&](auto node) {
+            if (auto sc = match(SEMICOLON_DELIM)) {
+                node->add(TerminalNode::make(sc));
+                return true;
+            }
+            else if (auto leftCurly = match(LEFT_CURLY_DELIM)) {
+                node->add(TerminalNode::make(leftCurly));
+                node->add(body());
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after function body.");
+                node->add(TerminalNode::make(rightCurly));
+                return true;
+            }
+            throw error(peek(), "Expected a semicolon ';' or body after function declaration.");
+        });
+    }
+
+    CST paramList() {
+        return tryParse("PARAM_LIST", [&](auto node) {
+            if (auto type = dt()) {
+                node->add(type);
+                node->add(checkAdd(id(), previous(), "Expected an identifier for a function parameter declaration."));
+
+                while (auto comma = match(COMMA_OP)) {
+                    node->add(checkAdd(
+                        dt(), previous(), "Expected a data type after comma ',' for function parameter declaration."
+                    ));
+                    node->add(
+                        checkAdd(id(), previous(), "Expected an identifier for a function parameter declaration.")
+                    );
+                }
+            }
+            else {
+                node->add(EpsilonNode::make());
+            }
+            return true;
+        });
+    }
+
+    // Function Calls
+    CST funcCall() {
+        return tryParse("FUNC_CALL", [&](auto node) {
+            const auto bt = m_current;
+            if (auto ident = id()) {
+                if (auto leftParen = match(LEFT_PAREN_DELIM)) {
+                    node->add(ident);
+                    node->add(TerminalNode::make(leftParen));
+
+                    auto rightParen = consume(
+                        RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after a function call argument list."
+                    );
+                    node->add(TerminalNode::make(rightParen));
+                    node->add(funcCallSuffix());
+                    return true;
+                }
+            }
+            m_current = bt;
+            return false;
+        });
+    }
+
+    CST funcCallSuffix() {
+        return tryParse("FUNC_CALL_SUFFIX", [&](auto node) {
+            if (auto sc = match(SEMICOLON_DELIM)) {
+                node->add(TerminalNode::make(sc));
+            }
+            else {
+                node->add(EpsilonNode::make());
+            }
+
+            return true;
+        });
+    }
+
+    // List of possible argument combinations
+    CST args() {
+        return tryParse("ARGS", [&](auto node) {
+            if (auto argLs = argList()) {
+                node->add(argLs);
+
+                while (auto comma = match(COMMA_OP)) {
+                    node->add(TerminalNode::make(comma));
+                    node->add(checkAdd(
+                        argList(), previous(), "Expected another argument after comma ',' inside function call."
+                    ));
+                }
+            }
+            else {
+                node->add(EpsilonNode::make());
+            }
+            return true;
+        });
+    }
+
+    CST argList() {
+        return tryParse("ARG_LIST", [&](auto node) {
+            if (auto argS = argSingle()) {
+                node->add(argS);
+
+                while (auto plus = match(ADD_OP)) {
+                    node->add(TerminalNode::make(plus));
+                    node->add(checkAdd(
+                        argSingle(), previous(),
+                        "Expected another argument after addition operator '+' inside function call."
+                    ));
+                }
+
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST argSingle() {
+        return tryParse("ARG_LIST", [&](auto node) {
+            if (auto allChar = match(CHAR_LITERAL)) {
+                node->add(TerminalNode::make(allChar));
+                return true;
+            }
+            else if (auto call = funcCall()) {
+                node->add(call);
+                return true;
+            }
+            else if (auto expr = expression()) {
+                node->add(expr);
+                return true;
+            }
+            return false;
+        });
+    }
 
     /* ================= Helpers ================= */
 
