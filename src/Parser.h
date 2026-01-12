@@ -1041,6 +1041,100 @@ private:
         });
     }
 
+    // [[ Struct Production Rule ]]
+
+    // Basic Struct Structure
+    CST structType() {
+        return tryParse("STRUCT_TYPE", [&](auto node) {
+            if (auto ident = id(USER_STRUCT_RESW)) {
+                node->add(ident);
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST structStmnt() {
+        return tryParse("STRUCT_STMNT", [&](auto node) {
+            if (auto kw = match(STRUCT_TYPE_RESW)) {
+                node->add(TerminalNode::make(kw));
+                node->add(
+                    checkAdd(structType(), previous(), "Expected a struct type identifier after 'struct' keyword.")
+                );
+
+                auto leftCurly = consume(
+                    LEFT_CURLY_DELIM,
+                    "Expected a left curly brace '{' after struct type identifier as a start of struct body."
+                );
+                node->add(TerminalNode::make(leftCurly));
+
+                while (auto body = structBody()) {
+                    node->add(body);
+
+                    auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after struct member declaration.");
+                    node->add(TerminalNode::make(sc));
+                }
+
+                auto rightCurly = consume(
+                    RIGHT_CURLY_DELIM,
+                    "Expected a right curly brace '{' after struct type identifier as a start of struct body."
+                );
+                node->add(TerminalNode::make(rightCurly));
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST structBody() {
+        return tryParse("STRUCT_BODY", [&](auto node) {
+            if (auto stmt = decStmnt()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto dec = structDec()) {
+                node->add(dec);
+                return true;
+            }
+
+            return false;
+        });
+    }
+
+    // Declaring instances of structs
+    CST structDec() {
+        return tryParse("STRUCT_DEC", [&](auto node) {
+            if (auto type = structType()) {
+                node->add(type);
+                node->add(checkAdd(
+                    structId(), previous(),
+                    "Expected a struct identifier after struct type in a struct declartion statement."
+                ));
+
+                while (auto comma = match(COMMA_OP)) {
+                    node->add(TerminalNode::make(comma));
+                    node->add(checkAdd(
+                        structId(), previous(),
+                        "Expected another struct identifier after comma in a struct declaration statement."
+                    ));
+                }
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST structId() {
+        return tryParse("STRUCT_DEC", [&](auto node) {
+            if (auto ident = id()) {
+                node->add(ident);
+                node->add(idSuffix());
+                return true;
+            }
+            return false;
+        });
+    }
+
     /* ================= Helpers ================= */
 
     template <typename Func>
