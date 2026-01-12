@@ -221,8 +221,7 @@ private:
                 node->add(TerminalNode::make(rightParen));
                 return true;
             }
-
-            throw error(previous(), "Expected an expression after.");
+            return false;
         });
     }
 
@@ -364,7 +363,7 @@ private:
         return tryParse("ID_SUFFIX", [&](auto node) {
             if (auto leftSquare = match(LEFT_SQUARE_DELIM)) {
                 node->add(TerminalNode::make(leftSquare));
-                node->add(expression());
+                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
                 auto rightSquare = consume(RIGHT_SQUARE_DELIM, "Expected ']' after expression");
                 node->add(TerminalNode::make(rightSquare));
             }
@@ -495,7 +494,7 @@ private:
         return tryParse("ASS_TAIL", [&](auto node) {
             if (auto op = assOp()) {
                 node->add(op);
-                node->add(expression());
+                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
             }
             else if (auto op = unaryAssOp()) {
                 node->add(op);
@@ -543,7 +542,7 @@ private:
         return tryParse("VAR_TAIL", [&](auto node) {
             if (auto ass = match(EQUAL_ASS_OP)) {
                 node->add(TerminalNode::make(ass));
-                node->add(expression());
+                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
             }
             else {
                 node->add(EpsilonNode::make());
@@ -616,7 +615,7 @@ private:
                     "Expected an opening parenthesis '(' after 'if' keyword as a start of conditional expression."
                 );
                 node->add(TerminalNode::make(leftParen));
-                node->add(expression());
+                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
 
                 auto rightParen =
                     consume(RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after 'if' expression.");
@@ -650,7 +649,7 @@ private:
                     "Expected an opening parenthesis '(' after 'elif' keyword as a start of conditional expression."
                 );
                 node->add(TerminalNode::make(leftParen));
-                node->add(expression());
+                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
 
                 auto rightParen =
                     consume(RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after 'elif' expression.");
@@ -721,7 +720,7 @@ private:
                     "Expected an opening parenthesis '(' after 'while' keyword as a start of conditional expression."
                 );
                 node->add(TerminalNode::make(leftParen));
-                node->add(expression());
+                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
 
                 auto rightParen = consume(
                     RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after 'while' conditional expression."
@@ -766,7 +765,7 @@ private:
                 );
 
                 node->add(TerminalNode::make(leftParen));
-                node->add(expression());
+                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
 
                 auto rightParen = consume(
                     RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after 'do while' conditional expression."
@@ -798,7 +797,7 @@ private:
                 auto scFirst = consume(SEMICOLON_DELIM, "Expected a semicolon ';' after for init expression.");
                 node->add(TerminalNode::make(scFirst));
 
-                node->add(expression());
+                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
                 auto scSecond = consume(SEMICOLON_DELIM, "Expected a semicolon ';' after for condition expression.");
                 node->add(TerminalNode::make(scSecond));
 
@@ -863,7 +862,7 @@ private:
         return tryParse("FOR_DEC_TAIL", [&](auto node) {
             if (auto equal = match(EQUAL_ASS_OP)) {
                 node->add(TerminalNode::make(equal));
-                node->add(expression());
+                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
             }
             else {
                 node->add(EpsilonNode::make());
