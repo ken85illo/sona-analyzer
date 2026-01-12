@@ -114,11 +114,19 @@ private:
                 advance();
             }
 
-            if (auto stmt = funcCall()) { // Must be called before assignment stmnt (both <id> first)
+            if (auto stmt = decSign()) {
                 node->add(stmt);
                 return true;
             }
-            else if (auto stmt = decSign()) {
+            else if(auto stmt = structStmnt()) {
+                node->add(stmt);
+                return true;
+            }
+            else if(auto stmt = structDec()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = funcCall()) { // Must be called before assignment stmnt (both <id> first)
                 node->add(stmt);
                 return true;
             }
@@ -1077,7 +1085,7 @@ private:
 
                 auto rightCurly = consume(
                     RIGHT_CURLY_DELIM,
-                    "Expected a right curly brace '{' after struct type identifier as a start of struct body."
+                    "Expected a right curly brace '}' after struct body."
                 );
                 node->add(TerminalNode::make(rightCurly));
                 return true;
@@ -1108,14 +1116,14 @@ private:
                 node->add(type);
                 node->add(checkAdd(
                     structId(), previous(),
-                    "Expected a struct identifier after struct type in a struct declartion statement."
+                    "Expected an identifier after type in a struct declartion statement."
                 ));
 
                 while (auto comma = match(COMMA_OP)) {
                     node->add(TerminalNode::make(comma));
                     node->add(checkAdd(
                         structId(), previous(),
-                        "Expected another struct identifier after comma in a struct declaration statement."
+                        "Expected another identifier after comma in a struct declaration statement."
                     ));
                 }
                 return true;
@@ -1134,6 +1142,10 @@ private:
             return false;
         });
     }
+
+
+    // [[ SONA Machine Production Rule ]]
+    
 
     /* ================= Helpers ================= */
 
