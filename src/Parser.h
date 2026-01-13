@@ -118,11 +118,19 @@ private:
                 node->add(stmt);
                 return true;
             }
-            else if(auto stmt = structStmnt()) {
+            else if (auto stmt = machStmnt()) {
                 node->add(stmt);
                 return true;
             }
-            else if(auto stmt = structDec()) {
+            else if (auto stmt = machDec()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = structStmnt()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = structDec()) {
                 node->add(stmt);
                 return true;
             }
@@ -320,7 +328,11 @@ private:
     // Variable operand cases
     CST operandList() {
         return tryParse("OPERAND_LIST", [&](auto node) {
-            if (auto ident = operandId()) {
+            if (auto func = funcCall()) {
+                node->add(func);
+                return true;
+            }
+            else if (auto ident = operandId()) {
                 node->add(ident);
                 return true;
             }
@@ -966,6 +978,7 @@ private:
                     node->add(ident);
                     node->add(TerminalNode::make(leftParen));
 
+                    node->add(args());
                     auto rightParen = consume(
                         RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after a function call argument list."
                     );
@@ -1014,8 +1027,8 @@ private:
 
     CST argList() {
         return tryParse("ARG_LIST", [&](auto node) {
-            if (auto argS = argSingle()) {
-                node->add(argS);
+            if (auto allChar = match(STR_LITERAL)) {
+                node->add(TerminalNode::make(allChar));
 
                 while (auto plus = match(ADD_OP)) {
                     node->add(TerminalNode::make(plus));
@@ -1027,20 +1040,6 @@ private:
 
                 return true;
             }
-            return false;
-        });
-    }
-
-    CST argSingle() {
-        return tryParse("ARG_LIST", [&](auto node) {
-            if (auto allChar = match(CHAR_LITERAL)) {
-                node->add(TerminalNode::make(allChar));
-                return true;
-            }
-            else if (auto call = funcCall()) {
-                node->add(call);
-                return true;
-            }
             else if (auto expr = expression()) {
                 node->add(expr);
                 return true;
@@ -1049,8 +1048,21 @@ private:
         });
     }
 
-    // [[ Struct Production Rule ]]
+    CST argSingle() {
+        return tryParse("ARG_SINGLE", [&](auto node) {
+            if (auto allChar = match(STR_LITERAL)) {
+                node->add(TerminalNode::make(allChar));
+                return true;
+            }
+            else if (auto list = operandList()) {
+                node->add(list);
+                return true;
+            }
+            return false;
+        });
+    }
 
+    // [[ Struct Production Rule ]]
     // Basic Struct Structure
     CST structType() {
         return tryParse("STRUCT_TYPE", [&](auto node) {
@@ -1083,10 +1095,7 @@ private:
                     node->add(TerminalNode::make(sc));
                 }
 
-                auto rightCurly = consume(
-                    RIGHT_CURLY_DELIM,
-                    "Expected a right curly brace '}' after struct body."
-                );
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after struct body.");
                 node->add(TerminalNode::make(rightCurly));
                 return true;
             }
@@ -1115,8 +1124,7 @@ private:
             if (auto type = structType()) {
                 node->add(type);
                 node->add(checkAdd(
-                    structId(), previous(),
-                    "Expected an identifier after type in a struct declartion statement."
+                    structId(), previous(), "Expected an identifier after type in a struct declartion statement."
                 ));
 
                 while (auto comma = match(COMMA_OP)) {
@@ -1143,9 +1151,423 @@ private:
         });
     }
 
-
     // [[ SONA Machine Production Rule ]]
-    
+
+    // Basic Machine Structure
+    CST machType() {
+        return tryParse("MACH_TYPE", [&](auto node) {
+            if (auto ident = id(USER_MACHINE_RESW)) {
+                node->add(ident);
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST machStmnt() {
+        return tryParse("MACH_STMNT", [&](auto node) {
+            if (auto mach = match(MACHINE_TYPE_RESW)) {
+                node->add(TerminalNode::make(mach));
+                node->add(
+                    checkAdd(machType(), previous(), "Expected a machine type identifier after 'Machine' keyword.")
+                );
+
+                auto eq = consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after machine type declaration.");
+                node->add(TerminalNode::make(eq));
+
+                auto leftCurly = consume(
+                    LEFT_CURLY_DELIM,
+                    "Expected a left curly brace '{' after machine type identifier as a start of machine body."
+                );
+                node->add(TerminalNode::make(leftCurly));
+
+                node->add(machBody());
+
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after machine body.");
+                node->add(TerminalNode::make(rightCurly));
+                return true;
+            }
+            return false;
+        });
+    }
+
+    // Machine Body
+    CST machBody() {
+        return tryParse("MACH_BODY", [&](auto node) {
+            while (auto dec = decStmnt()) {
+                node->add(dec);
+
+                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon ';' after declaration statement.");
+                node->add(TerminalNode::make(sc));
+            }
+
+            if (auto con = context()) {
+                node->add(con);
+                node->add(checkAdd(stateDec(), previous(), "Expected @states after @context declaration statement."));
+                node->add(checkAdd(startDec(), previous(), "Expected @start after @states declaration statement."));
+                node->add(machBodyList());
+                return true;
+            }
+
+            throw error(
+                previous(), "Expected machine body statement after open curly brace '{' (Base order: @context, "
+                            "@states, @start, @transitions, @state)"
+            );
+        });
+    }
+
+    // Different Machine Cases: (1) Without @final &@finalState. (2) With @final & without @finalState. (3) With @final
+    // & @finalState.
+    CST machBodyList() {
+        return tryParse("MACH_BODY_LIST", [&](auto node) {
+            if (auto body = baseMach()) {
+                node->add(body);
+                return true;
+            }
+            else if (auto body = finalMach()) {
+                node->add(body);
+                return true;
+            }
+            throw error(
+                peek(), "Expected at least a @transitions declaration and a @state body declaration after @start for a "
+                        "base machine (@transitions body must come first)."
+            );
+        });
+    }
+
+    CST baseMach() {
+        return tryParse("BASE_MACH", [&](auto node) {
+            if (auto trans = transDec()) {
+                node->add(trans);
+                node->add(
+                    checkAdd(stateBodyDec(), previous(), "Expected a @state body declaration after @transitions.")
+                );
+                while (auto dec = stateBodyDec()) {
+                    node->add(dec);
+                }
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST finalMach() {
+        return tryParse("FINAL_MACH", [&](auto node) {
+            if (auto final = finalDec()) {
+                node->add(final);
+                node->add(checkAdd(baseMach(), previous(), "Expected a @transitions body declaration after @final."));
+                node->add(finalSuffix());
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST finalSuffix() {
+        return tryParse("FINAL_SUFFIX", [&](auto node) {
+            if (auto dec = finalBodyDec()) {
+                node->add(dec);
+            }
+            else {
+                node->add(EpsilonNode::make());
+            }
+            return true;
+        });
+    }
+
+    // Parts of the Machine
+    CST context() {
+        return tryParse("CONTEXT", [&](auto node) {
+            if (auto con = match(MAC_CONTEXT_RESW)) {
+                node->add(TerminalNode::make(con));
+
+                auto equal = consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after @context declaration.");
+                node->add(TerminalNode::make(equal));
+
+                auto leftCurly = consume(
+                    LEFT_CURLY_DELIM, "Expected a left curly brace '{' after assignment operator of @context as a "
+                                      "start of declaration statements."
+                );
+                node->add(TerminalNode::make(leftCurly));
+
+                node->add(contextVar());
+
+                auto rightCurly = consume(
+                    RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after @context declaration statements."
+                );
+                node->add(TerminalNode::make(rightCurly));
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST contextVar() {
+        return tryParse("CONTEXT_VAR", [&](auto node) {
+            node->add(mod());
+
+            if (auto type = dt()) {
+                node->add(type);
+                node->add(
+                    checkAdd(decStmnt(), previous(), "Expected an identifier for variable declaration in @context.")
+                );
+                return true;
+            }
+
+            throw error(previous(), "Expected a variable declaration inside @context statement.");
+        });
+    }
+
+    CST stateDec() {
+        return tryParse("STATE_DEC", [&](auto node) {
+            if (auto st = match(MAC_STATES_RESW)) {
+                node->add(TerminalNode::make(st));
+
+                auto equal = consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after @states declaration.");
+                node->add(TerminalNode::make(equal));
+
+                auto leftCurly = consume(
+                    LEFT_CURLY_DELIM, "Expected a left curly brace '{' after assignment operator of @states as a "
+                                      "start of state identifier list."
+                );
+                node->add(TerminalNode::make(leftCurly));
+
+                auto firstId = consume(STR_LITERAL, "Expected a state identifier inside @states declaration.");
+                node->add(TerminalNode::make(firstId));
+
+                while (auto comma = match(COMMA_OP)) {
+                    node->add(TerminalNode::make(comma));
+
+                    auto nextId = consume(STR_LITERAL, "Expected another state identifier after comma operator.");
+                    node->add(TerminalNode::make(nextId));
+                }
+
+                auto rightCurly =
+                    consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after @states identifier list.");
+                node->add(TerminalNode::make(rightCurly));
+
+                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon ';' after @states declaration statement.");
+                node->add(TerminalNode::make(sc));
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST startDec() {
+        return tryParse("START_DEC", [&](auto node) {
+            if (auto st = match(MAC_START_RESW)) {
+                node->add(TerminalNode::make(st));
+
+                auto equal = consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after @start declaration.");
+                node->add(TerminalNode::make(equal));
+
+                auto ident = consume(STR_LITERAL, "Expected state identifier for @start declaration.");
+                node->add(TerminalNode::make(ident));
+
+                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon ';' after @start declaration statement.");
+                node->add(TerminalNode::make(sc));
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST finalDec() {
+        return tryParse("FINAL_DEC", [&](auto node) {
+            if (auto final = match(MAC_FINAL_RESW)) {
+                node->add(TerminalNode::make(final));
+
+                auto equal = consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after @final declaration.");
+                node->add(TerminalNode::make(equal));
+
+                auto leftCurly = consume(
+                    LEFT_CURLY_DELIM, "Expected a left curly brace '{' after assignment operator of @final as a "
+                                      "start of state identifier list."
+                );
+                node->add(TerminalNode::make(leftCurly));
+
+                auto firstId = consume(STR_LITERAL, "Expected a state identifier inside @final declaration.");
+                node->add(TerminalNode::make(firstId));
+
+                while (auto comma = match(COMMA_OP)) {
+                    node->add(TerminalNode::make(comma));
+
+                    auto nextId = consume(STR_LITERAL, "Expected another state identifier after comma operator.");
+                    node->add(TerminalNode::make(nextId));
+                }
+
+                auto rightCurly =
+                    consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after @final identifier list.");
+                node->add(TerminalNode::make(rightCurly));
+
+                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon ';' after @final declaration statement.");
+                node->add(TerminalNode::make(sc));
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST transDec() {
+        return tryParse("TRANS_DEC", [&](auto node) {
+            if (auto trans = match(MAC_TRANSITIONS_RESW)) {
+                node->add(TerminalNode::make(trans));
+
+                auto equal =
+                    consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after @transitions declaration.");
+                node->add(TerminalNode::make(equal));
+
+                auto leftCurly = consume(
+                    LEFT_CURLY_DELIM, "Expected a left curly brace '{' after assignment operator of @transitions as a "
+                                      "start of transition list."
+                );
+                node->add(TerminalNode::make(leftCurly));
+
+                if (auto trans = transition()) {
+                    node->add(trans);
+                }
+                else {
+                    node->add(EpsilonNode::make());
+                }
+
+                while (auto trans = transition()) {
+                    node->add(trans);
+                }
+
+                auto rightCurly =
+                    consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after @transitions list.");
+                node->add(TerminalNode::make(rightCurly));
+
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST transition() {
+        return tryParse("TRANSITION", [&](auto node) {
+            if (auto leftParen = match(LEFT_PAREN_DELIM)) {
+                node->add(TerminalNode::make(leftParen));
+
+                auto ident = consume(STR_LITERAL, "Expected an initial state identifier for a transition statement.");
+                node->add(TerminalNode::make(ident));
+
+                auto comma =
+                    consume(COMMA_OP, "Expected a comma after initial state identifier in transition statement.");
+                node->add(TerminalNode::make(comma));
+
+                node->add(
+                    checkAdd(expression(), previous(), "Expected an expression after comma in transition statement.")
+                );
+
+                auto rightParen =
+                    consume(RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after transition expression.");
+                node->add(TerminalNode::make(rightParen));
+
+                auto equal = consume(EQUAL_ASS_OP, "Expected an assignment operator '=' for a transition statement.");
+                node->add(TerminalNode::make(equal));
+
+                auto output = consume(
+                    STR_LITERAL,
+                    "Expected an output state identifier after assignment operator '=' in a transition statement."
+                );
+                node->add(TerminalNode::make(output));
+
+                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon ';' after transition statement.");
+                node->add(TerminalNode::make(sc));
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST stateBodyDec() {
+        return tryParse("STATE_BODY_DEC", [&](auto node) {
+            if (auto dec = match(MAC_STATE_RESW)) {
+                node->add(TerminalNode::make(dec));
+
+                node->add(checkAdd(
+                    id(), previous(),
+                    "Expected an identifier after '@state' keyword in state body declaration statement."
+                ));
+
+                auto equal = consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after @state declaration.");
+                node->add(TerminalNode::make(equal));
+
+                auto leftCurly = consume(
+                    LEFT_CURLY_DELIM, "Expected a left curly brace '{' after assignment operator of @state as a "
+                                      "start of state function body."
+                );
+                node->add(TerminalNode::make(leftCurly));
+
+                node->add(body());
+
+                auto rightCurly =
+                    consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after @state function body.");
+                node->add(TerminalNode::make(rightCurly));
+
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST finalBodyDec() {
+        return tryParse("FINAL_BODY_DEC", [&](auto node) {
+            if (auto final = match(MAC_FINAL_STATE_RESW)) {
+                node->add(TerminalNode::make(final));
+
+                auto equal =
+                    consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after @finalState declaration.");
+                node->add(TerminalNode::make(equal));
+
+                auto leftCurly = consume(
+                    LEFT_CURLY_DELIM, "Expected a left curly brace '{' after assignment operator of @finalState as a "
+                                      "start of final state function body."
+                );
+                node->add(TerminalNode::make(leftCurly));
+
+                node->add(body());
+
+                auto rightCurly =
+                    consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after @finalState function body.");
+                node->add(TerminalNode::make(rightCurly));
+
+                return true;
+            }
+            return false;
+        });
+    }
+
+    // Declaring instances of Machines
+    CST machDec() {
+        return tryParse("MACH_DEC", [&](auto node) {
+            if (auto mach = machType()) {
+                node->add(mach);
+
+                node->add(checkAdd(
+                    id(), previous(),
+                    "Expected an identifier after machine type in a machine instance declaration statement."
+                ));
+
+                while (auto comma = match(COMMA_OP)) {
+                    node->add(TerminalNode::make(comma));
+                    node->add(checkAdd(
+                        id(), previous(),
+                        "Expected another identifier after comma operator ',' in a machine instance declaration "
+                        "statement."
+                    ));
+                }
+
+                auto sc =
+                    consume(SEMICOLON_DELIM, "Expected a semicolon ';' after machine instance declaration statement.");
+                node->add(TerminalNode::make(sc));
+                return true;
+            }
+            return false;
+        });
+    }
 
     /* ================= Helpers ================= */
 

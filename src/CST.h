@@ -25,15 +25,17 @@ public:
         ordered_json result = ordered_json::array();
 
         for (const auto &child: m_children) {
-            auto childJson = child->toJson(currentPath);
+            if (child) {
+                auto childJson = child->toJson(currentPath);
 
-            if (childJson.is_array()) {
-                for (auto &elem: childJson) {
-                    result.push_back(elem);
+                if (childJson.is_array()) {
+                    for (auto &elem: childJson) {
+                        result.push_back(elem);
+                    }
                 }
-            }
-            else {
-                result.push_back(childJson);
+                else {
+                    result.push_back(childJson);
+                }
             }
         }
 

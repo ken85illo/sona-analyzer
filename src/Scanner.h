@@ -46,7 +46,16 @@ private:
 
     TokenVec m_tokens;
     TokenMap m_userDefinedTokens;
-    IdSet m_idsDefined{ "readChar", "readLine", "print", "parseInt", "parseString", "exit", "x" };
+    IdSet m_idsDefined{ "readChar",
+                        "readLine",
+                        "print",
+                        "parseInt",
+                        "parseString",
+                        "exit",
+                        "x",
+                        "maintainTemperature",
+                        "decreaseTemperature",
+                        "increaseTemperature" }; // testing lang
 
     size_t m_start = 0;
     size_t m_current = 0;

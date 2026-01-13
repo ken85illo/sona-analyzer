@@ -181,7 +181,7 @@ void decreaseTemperature(int currentTemperature) {
 }
 
 Machine Thermometer = {
-    @context = {int temperature};
+    @context = {int temperature}
 
     @states = {"Freezing", "Cold", "Normal", "Hot", "Boiling"};
     @start = "Normal";
