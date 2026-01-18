@@ -63,12 +63,13 @@ private:
 class TerminalNode : public CSTNode {
 public:
     TerminalNode(const Ref<Token> &token)
-    : m_lexeme(token->lexeme()), m_tokenType(token->typeString()) {}
+    : m_lexeme(token->lexeme()), m_line(token->line()), m_tokenType(token->typeString()) {}
 
     ordered_json toJson(const std::string &path = "") const override {
         return ordered_json{
             {          "type",  "terminal" },
             {        "lexeme",    m_lexeme },
+            {          "line",      m_line },
             {    "token_type", m_tokenType },
             { "non_terminals",        path }
         };
@@ -79,24 +80,30 @@ public:
     }
 
 private:
-    std::string m_lexeme;
-    std::string m_tokenType;
+    const std::string m_lexeme;
+    const std::string m_tokenType;
+    const size_t m_line;
 };
 
 class EpsilonNode : public CSTNode {
 public:
-    EpsilonNode() {}
+    EpsilonNode(const Ref<Token> &token)
+    : m_line(token->line()) {}
 
     ordered_json toJson(const std::string &path = "") const override {
         return ordered_json{
             {          "type", "epsilon" },
+            {          "line",    m_line },
             { "non_terminals",      path }
         };
     }
 
-    static Ref<EpsilonNode> make() {
-        return MakeRef<EpsilonNode>();
+    static Ref<EpsilonNode> make(const Ref<Token> &token) {
+        return MakeRef<EpsilonNode>(token);
     }
+
+private:
+    const size_t m_line;
 };
 
 class ErrorNode : public CSTNode {
@@ -105,7 +112,6 @@ public:
     : m_line(token->line()), m_synchronize(synchronize) {}
 
     ordered_json toJson(const std::string &path = "") const {
-
         if (m_synchronize) {
             return ordered_json{
                 {          "type","error"                                  },
@@ -115,6 +121,7 @@ public:
                  {
                  { "lexeme", m_synchronize->lexeme() },
                  { "token_type", m_synchronize->typeString() },
+                 { "line", m_synchronize->line() },
                  }                                       },
                 { "non_terminals",                   path }
             };

@@ -5,7 +5,7 @@ const app = express()
 
 function processLexemeAndTokens(output) {
     console.log(output)
-    return JSON.parse(output)['lexical']
+    return JSON.parse(output)
 }
 
 const { spawn } = require('child_process')

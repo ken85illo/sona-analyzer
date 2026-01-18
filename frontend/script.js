@@ -3,8 +3,12 @@ const table_elem = document.getElementById('lexical-elements-table')
 const loadingIndicator = document.getElementById('loading-indicator')
 const lineSpinner = document.getElementById('line-number')
 const importBtn = document.getElementById('import-btn')
+const parserDialog = document.getElementById('parser-log')
+const syntaxContainer = document.getElementById('syntax-container')
 const defaultContent = table_elem.innerHTML
 let lexicalAnalysis = null
+let syntaxAnalysis = null
+let errors = null
 let view = 0
 let highlightedLine = null
 
@@ -50,6 +54,87 @@ const displayLexicalElements = (showAll = false) => {
     table_elem.innerHTML = html
 }
 
+const displaySyntaxElements = () => {
+    let html = ''
+
+    for (const elem of syntaxAnalysis) {
+        if (elem.type === 'terminal') {
+            html += `
+                <div class="syntax-card terminal-card">
+                    <div class="terminal-card-header">
+                        <div>${elem.token_type}</div>
+                        <div>${elem.lexeme}</div>
+                    </div>
+                    <hr/>
+                    <div class="syntax-card-prod">
+            `
+
+            for (const nonTerm of elem.non_terminals.split('|')) {
+                html += `
+                    <div>&lt;${nonTerm}&gt;</div>
+                `
+            }
+
+            html += `
+                    </div>
+                    <div class="line-number">${elem.line}</div>
+                </div>
+            `
+        } else if (elem.type === 'epsilon') {
+            html += `
+                <div class="syntax-card epsilon-card">
+                    <div>EPSILON</div>
+                    <hr/>
+                    <div class="syntax-card-prod">
+            `
+
+            for (const nonTerm of elem.non_terminals.split('|')) {
+                html += `
+                    <div>&lt;${nonTerm}&gt;</div>
+                `
+            }
+
+            html += `
+                    </div>
+                    <div class="line-number">${elem.line}</div>
+                </div>
+            `
+        } else if (elem.type === 'error') {
+            const sync = elem.synchronize
+            html += `
+                <div class="syntax-card error-card">
+                    <div>ERROR</div>
+                    <hr/>
+                    <div class="error-message">${errors[String(elem.line)][elem.index]}</div>
+            `
+
+            if (sync) {
+                html += `
+                    <div class="error-message margin-bottom">Synchronizing to token ${sync.token_type} with lexeme '${sync.lexeme}' on line ${sync.line}... </div>
+                `
+            }
+
+            html += `
+                    <div class="syntax-card-prod">
+            `
+
+            for (const nonTerm of elem.non_terminals.split('|')) {
+                html += `
+                    <div>&lt;${nonTerm}&gt;</div>
+                `
+            }
+
+            html += `
+                    </div>
+                    <div class="line-number">${elem.line}</div>
+                </div>
+            `
+        }
+    }
+
+    syntaxContainer.innerHTML = html
+}
+
 const lexicalAnalyzer = async (text_JSON) => {
     try {
         loadingIndicator.style.display = 'block'
@@ -63,7 +148,12 @@ const lexicalAnalyzer = async (text_JSON) => {
 
         if (!rawResponse.ok) throw new Error('Server error')
 
-        lexicalAnalysis = await rawResponse.json()
+        const response = await rawResponse.json()
+        lexicalAnalysis = response['lexical']
+        syntaxAnalysis = response['syntactical']
+        errors = response['errors']
+        console.log(lexicalAnalysis)
+
         lineSpinner.value = 1
         lineSpinner.max = String(
             Object.keys(lexicalAnalysis).reduce((max, current) => {
@@ -74,8 +164,8 @@ const lexicalAnalyzer = async (text_JSON) => {
                 return max
             }, 0)
         )
-        console.log(lexicalAnalysis)
         displayLexicalElements(true) //display all elements
+        displaySyntaxElements()
     } catch (err) {
         console.error('Fetch error:', err)
     } finally {
@@ -121,6 +211,7 @@ const handleSubmit = () => {
     console.log('Handle Submit')
 
     lexicalAnalyzer(text_JSON)
+    parserDialog.showModal()
 }
 
 // Adds tabs instead of manually adding white-spaces

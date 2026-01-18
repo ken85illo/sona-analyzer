@@ -127,7 +127,7 @@ private:
                 node->add(TerminalNode::make(kw));
             }
             else {
-                node->add(EpsilonNode::make());
+                node->add(EpsilonNode::make(peek()));
             }
             return true;
         });
@@ -174,7 +174,7 @@ private:
             }
 
             if (node->empty()) {
-                node->add(EpsilonNode::make());
+                node->add(EpsilonNode::make(peek()));
             }
             return true;
         });
@@ -504,7 +504,7 @@ private:
                 node->add(TerminalNode::make(rightSquare));
             }
             else {
-                node->add(EpsilonNode::make());
+                node->add(EpsilonNode::make(peek()));
             }
             return true;
         });
@@ -521,7 +521,7 @@ private:
                 node->add(idSuffix());
             }
             else {
-                node->add(EpsilonNode::make());
+                node->add(EpsilonNode::make(peek()));
             }
             return true;
         });
@@ -654,7 +654,7 @@ private:
                 node->add(op);
             }
             else {
-                node->add(EpsilonNode::make());
+                node->add(EpsilonNode::make(peek()));
             }
 
             return true;
@@ -700,7 +700,7 @@ private:
                 node->add(checkAdd(expression(), previous(), "Expected an expression after."));
             }
             else {
-                node->add(EpsilonNode::make());
+                node->add(EpsilonNode::make(peek()));
             }
             return true;
         });
@@ -741,7 +741,7 @@ private:
                 node->add(TerminalNode::make(rightCurly));
             }
             else {
-                node->add(EpsilonNode::make());
+                node->add(EpsilonNode::make(peek()));
             }
             return true;
         });
@@ -836,7 +836,7 @@ private:
                 node->add(elseStmnt());
             }
             else {
-                node->add(EpsilonNode::make());
+                node->add(EpsilonNode::make(peek()));
             }
             return true;
         });
@@ -994,7 +994,7 @@ private:
                 }
             }
             else {
-                node->add(EpsilonNode::make());
+                node->add(EpsilonNode::make(peek()));
             }
 
             return true;
@@ -1020,7 +1020,7 @@ private:
                 node->add(checkAdd(expression(), previous(), "Expected an expression after."));
             }
             else {
-                node->add(EpsilonNode::make());
+                node->add(EpsilonNode::make(peek()));
             }
             return true;
         });
@@ -1032,7 +1032,7 @@ private:
                 node->add(stmt);
             }
             else {
-                node->add(EpsilonNode::make());
+                node->add(EpsilonNode::make(peek()));
             }
             return true;
         });
@@ -1098,7 +1098,7 @@ private:
                 }
             }
             else {
-                node->add(EpsilonNode::make());
+                node->add(EpsilonNode::make(peek()));
             }
             return true;
         });
@@ -1140,7 +1140,7 @@ private:
                 }
             }
             else {
-                node->add(EpsilonNode::make());
+                node->add(EpsilonNode::make(peek()));
             }
             return true;
         });
@@ -1390,7 +1390,7 @@ private:
                 node->add(dec);
             }
             else {
-                node->add(EpsilonNode::make());
+                node->add(EpsilonNode::make(peek()));
             }
             return true;
         });
@@ -1549,7 +1549,7 @@ private:
                     node->add(trans);
                 }
                 else {
-                    node->add(EpsilonNode::make());
+                    node->add(EpsilonNode::make(peek()));
                 }
 
                 while (auto trans = transition()) {
