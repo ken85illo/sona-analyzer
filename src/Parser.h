@@ -11,9 +11,6 @@ public:
         ParseError(const Ref<Token> &token)
         : std::runtime_error(""), token(token), node(nullptr) {}
 
-        ParseError(const CST &node)
-        : std::runtime_error(""), token(nullptr), node(node) {}
-
         Ref<Token> token;
         CST node;
     };
@@ -74,34 +71,39 @@ private:
     }
 
     CST offMainList() {
-        return tryParse("_OFF_MAIN_LIST", [&](auto node) {
-            // Skip all line comment and multiline comments
-            while (check(LINE_COMNT) || check(MULTILINE_COMNT)) {
-                advance();
-            }
+        try {
+            return tryParse("_OFF_MAIN_LIST", [&](auto node) {
+                // Skip all line comment and multiline comments
+                while (check(LINE_COMNT) || check(MULTILINE_COMNT)) {
+                    advance();
+                }
 
-            if (auto stmt = decSign()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = machStmnt()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = machDec()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = structStmnt()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = structDec()) {
-                node->add(stmt);
-                return true;
-            }
-            return false;
-        });
+                if (auto stmt = decSign()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = machStmnt()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = machDec()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = structStmnt()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = structDec()) {
+                    node->add(stmt);
+                    return true;
+                }
+                return false;
+            });
+        }
+        catch (ParseError &error) {
+            return error.node;
+        }
     }
 
     // Global + Data Type
@@ -180,58 +182,63 @@ private:
 
     // List of statements
     CST statements() {
-        return tryParse("_STATEMENTS", [&](auto node) {
-            // Skip all line comment and multiline comments
-            while (check(LINE_COMNT) || check(MULTILINE_COMNT)) {
-                advance();
-            }
+        try {
+            return tryParse("_STATEMENTS", [&](auto node) {
+                // Skip all line comment and multiline comments
+                while (check(LINE_COMNT) || check(MULTILINE_COMNT)) {
+                    advance();
+                }
 
-            if (auto stmt = decSign()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = machStmnt()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = machDec()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = structStmnt()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = structDec()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = funcCall()) { // Must be called before assignment stmnt (both <id> first)
-                node->add(stmt);
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after function call statement.");
-                node->add(TerminalNode::make(sc));
-                return true;
-            }
-            else if (auto stmt = assStmnt()) {
-                node->add(stmt);
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after assignment statement.");
-                node->add(TerminalNode::make(sc));
-                return true;
-            }
-            else if (auto stmt = condStmnt()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = iterativeStmt()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = returnStmnt()) {
-                node->add(stmt);
-                return true;
-            }
-            return false;
-        });
+                if (auto stmt = decSign()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = machStmnt()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = machDec()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = structStmnt()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = structDec()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = funcCall()) { // Must be called before assignment stmnt (both <id> first)
+                    node->add(stmt);
+                    auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after function call statement.");
+                    node->add(TerminalNode::make(sc));
+                    return true;
+                }
+                else if (auto stmt = assStmnt()) {
+                    node->add(stmt);
+                    auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after assignment statement.");
+                    node->add(TerminalNode::make(sc));
+                    return true;
+                }
+                else if (auto stmt = condStmnt()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = iterativeStmt()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = returnStmnt()) {
+                    node->add(stmt);
+                    return true;
+                }
+                return false;
+            });
+        }
+        catch (ParseError &error) {
+            return error.node;
+        }
     }
 
     // General Return Statements
@@ -263,57 +270,72 @@ private:
     // General Expression
     CST expression() {
         return tryParse("EXPRESSION", [&](auto node) {
-            node->add(logicalLevel());
-            return true;
+            if (auto nt = logicalLevel()) {
+                node->add(nt);
+                return true;
+            }
+            return false;
         });
     }
 
     // Expression Precedence: Parentheses > Arithmetic > Relational > Logical
     CST logicalLevel() {
         return tryParse("LOGICAL_LEVEL", [&](auto node) {
-            node->add(relLevel());
-
-            while (auto nt = logOp()) {
+            if (auto nt = relLevel()) {
                 node->add(nt);
-                node->add(relLevel());
+
+                while (auto nt = logOp()) {
+                    node->add(nt);
+                    node->add(relLevel());
+                }
+                return true;
             }
-            return true;
+            return false;
         });
     }
 
     CST relLevel() {
         return tryParse("REL_LEVEL", [&](auto node) {
-            node->add(arithLevel());
-
-            while (auto nt = relOp()) {
+            if (auto nt = arithLevel()) {
                 node->add(nt);
-                node->add(arithLevel());
+
+                while (auto nt = relOp()) {
+                    node->add(nt);
+                    node->add(arithLevel());
+                }
+                return true;
             }
-            return true;
+            return false;
         });
     }
 
     CST arithLevel() {
         return tryParse("ARITH_LEVEL", [&](auto node) {
-            node->add(term());
-
-            while (auto nt = addOp()) {
+            if (auto nt = term()) {
                 node->add(nt);
-                node->add(term());
+
+                while (auto nt = addOp()) {
+                    node->add(nt);
+                    node->add(term());
+                }
+                return true;
             }
-            return true;
+            return false;
         });
     }
 
     CST term() {
         return tryParse("TERM", [&](auto node) {
-            node->add(factor());
-
-            while (auto nt = multOp()) {
+            if (auto nt = factor()) {
                 node->add(nt);
-                node->add(factor());
+
+                while (auto nt = multOp()) {
+                    node->add(nt);
+                    node->add(factor());
+                }
+                return true;
             }
-            return true;
+            return false;
         });
     }
 
@@ -674,6 +696,7 @@ private:
         return tryParse("VAR_TAIL", [&](auto node) {
             if (auto ass = match(EQUAL_ASS_OP)) {
                 node->add(TerminalNode::make(ass));
+
                 node->add(checkAdd(expression(), previous(), "Expected an expression after."));
             }
             else {
@@ -1831,12 +1854,12 @@ private:
         throw error(token, "Undefined identifier or keyword");
     }
 
-    int64_t synchronize() {
+    Ref<Token> synchronize() {
         advance();
 
         while (!isAtEnd()) {
             if (previous()->type() == SEMICOLON_DELIM) {
-                return m_current;
+                return peek();
             }
 
             switch (peek()->type()) {
@@ -1863,7 +1886,7 @@ private:
             case IF_RESW:
             case WHILE_KEYW:
             case RETURN_RESW:
-                return m_current;
+                return peek();
                 break;
             default:
                 break;
@@ -1872,6 +1895,6 @@ private:
             advance();
         }
 
-        return -1;
+        return nullptr;
     }
 };

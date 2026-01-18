@@ -101,25 +101,40 @@ public:
 
 class ErrorNode : public CSTNode {
 public:
-    ErrorNode(const Ref<Token> &token, int32_t synchronize)
+    ErrorNode(const Ref<Token> &token, const Ref<Token> &synchronize)
     : m_line(token->line()), m_synchronize(synchronize) {}
 
     ordered_json toJson(const std::string &path = "") const {
+
+        if (m_synchronize) {
+            return ordered_json{
+                {          "type","error"                                  },
+                {          "line",                 m_line },
+                {         "index", s_errorIndex[m_line]++ },
+                {   "synchronize",
+                 {
+                 { "lexeme", m_synchronize->lexeme() },
+                 { "token_type", m_synchronize->typeString() },
+                 }                                       },
+                { "non_terminals",                   path }
+            };
+        }
+
         return ordered_json{
             {          "type",                "error" },
             {          "line",                 m_line },
             {         "index", s_errorIndex[m_line]++ },
-            {   "synchronize",          m_synchronize },
+            {   "synchronize",                nullptr },
             { "non_terminals",                   path }
         };
     }
 
-    static Ref<ErrorNode> make(const Ref<Token> &token, size_t synchronize) {
+    static Ref<ErrorNode> make(const Ref<Token> &token, const Ref<Token> &synchronize) {
         return MakeRef<ErrorNode>(token, synchronize);
     }
 
 private:
     inline static std::unordered_map<size_t, size_t> s_errorIndex;
     const size_t m_line;
-    const int64_t m_synchronize;
+    const Ref<Token> m_synchronize;
 };
