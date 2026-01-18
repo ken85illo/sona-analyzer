@@ -2,6 +2,7 @@ const textarea_elem = document.getElementById('textarea-element')
 const table_elem = document.getElementById('lexical-elements-table')
 const loadingIndicator = document.getElementById('loading-indicator')
 const lineSpinner = document.getElementById('line-number')
+const importBtn = document.getElementById('import-btn')
 const defaultContent = table_elem.innerHTML
 let lexicalAnalysis = null
 let view = 0
@@ -15,10 +16,7 @@ const displayLexicalElements = (showAll = false) => {
 
     lineSpinner.disabled = showAll
 
-    let html = ''
-
-    // Reset table to default header
-    html += defaultContent
+    let html = defaultContent
 
     if (showAll) {
         // Display all lines
@@ -36,10 +34,7 @@ const displayLexicalElements = (showAll = false) => {
     } else {
         // Display only the selected line
         const filteredLine = lexicalAnalysis[lineSpinner.value]
-        if (!filteredLine) {
-            html = ''
-            return
-        }
+        if (!filteredLine) return
 
         for (const lexical_element of filteredLine) {
             html += `
@@ -71,8 +66,8 @@ const lexicalAnalyzer = async (text_JSON) => {
         lexicalAnalysis = await rawResponse.json()
         lineSpinner.value = 1
         lineSpinner.max = String(
-            Object.entries(lexicalAnalysis).reduce((max, current) => {
-                const currentLine = parseInt(current[0])
+            Object.keys(lexicalAnalysis).reduce((max, current) => {
+                const currentLine = parseInt(current)
                 if (currentLine > max) {
                     return currentLine
                 }
@@ -81,7 +76,6 @@ const lexicalAnalyzer = async (text_JSON) => {
         )
         console.log(lexicalAnalysis)
         displayLexicalElements(true) //display all elements
-        //displayLexicalElements();
     } catch (err) {
         console.error('Fetch error:', err)
     } finally {
@@ -269,3 +263,20 @@ function spinnerDecrement() {
     displayLexicalElements()
     highlightEditorLine(lineSpinner.value)
 }
+
+importBtn.addEventListener('change', () => {
+    const reader = new FileReader()
+
+    reader.onload = function () {
+        editor.setValue(reader.result)
+    }
+
+    reader.onerror = function (error) {
+        alert(`Error reading file: ${error.type}`)
+    }
+
+    if (importBtn.files && importBtn.files[0]) {
+        console.log(importBtn.files)
+        reader.readAsText(importBtn.files[0])
+    }
+})

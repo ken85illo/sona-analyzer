@@ -28,6 +28,7 @@
 }
 
 .text-editor-container {
+    position: relative;
     margin: 5px;
     background-color: #151718;
     width: 80%;
@@ -272,6 +273,21 @@ header {
     transform: scale(1.04);
     color: #9f4242;
 }
+
+input[type='file'] {
+    height: 0;
+    padding: 0;
+    opacity: 0;
+    position: absolute;
+}
+
+label[for='import-btn'] {
+    position: absolute;
+    right: 20px;
+    padding: 10px 20px;
+    z-index: 1;
+}
+
 #button-div {
     display: flex;
     gap: 2px;
