@@ -36,7 +36,10 @@ const displayLexicalElements = (showAll = false) => {
     } else {
         // Display only the selected line
         const filteredLine = lexicalAnalysis[lineSpinner.value]
-        if (!filteredLine) return
+        if (!filteredLine) {
+            html = ''
+            return
+        }
 
         for (const lexical_element of filteredLine) {
             html += `

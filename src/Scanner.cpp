@@ -98,6 +98,11 @@ void Scanner::string() {
     }
 
     // Skip the last double quote
+    if (isAtEnd()) {
+        addToken(UNKNOWN);
+        return;
+    }
+
     advance();
     addToken(STR_LITERAL);
 }

@@ -1821,6 +1821,9 @@ private:
                 token, "Invalid use of modulo assignment operator (Example: x %= <expression>)", "MODULO_ASS_OP"
             );
         }
+        if (token->lexeme()[0] == '\"') {
+            throw error(token, "Non terminated \" in a string literal (Example: \"Hello\" or \"123\")", "CHAR_LITERAL");
+        }
         if (token->lexeme()[0] == '\'') {
             throw error(token, "Non terminated ' in a character literal (Example: 'x' or '1')", "CHAR_LITERAL");
         }
