@@ -24,7 +24,8 @@
 
 .lexical-analysis-table-container {
     overflow-y: scroll;
-    height: 90%;
+    margin-bottom: 10px;
+    flex-grow: 1;
 }
 
 .text-editor-container {
@@ -73,8 +74,13 @@
     border: solid 0.5px;
     border-color: rgba(255, 255, 255, 0.3);
     border-radius: 20px;
-    padding: 10px;
+    padding: 20px 10px;
+    padding-bottom: 30px;
     box-shadow: 0 0 10px rgb(0, 0, 0);
+
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 .CodeMirror {
     height: 100%;
@@ -144,6 +150,7 @@ td {
         0 0 10px #ff2f2f,
         0 0 30px rgba(255, 47, 47, 0.3);
     transition: all 0.3s ease-in-out;
+    display: inline-block;
 }
 
 .bttn:hover {
@@ -153,6 +160,7 @@ td {
         0 0 60px #ff2f2f;
     transform: scale(1.05);
 }
+
 #analyze-bttn {
     transform: scale(0.98);
 }
@@ -335,6 +343,10 @@ input[type='number'] {
     align-items: center;
 }
 
+#parser-log-header * {
+    font-size: 14px !important;
+}
+
 #syntax-container {
     flex-grow: 1;
     display: flex;
@@ -381,9 +393,16 @@ input[type='number'] {
     }
 }
 
+.terminal-lexeme {
+    background-color: hsl(158, 51%, 20%, 60%);
+    padding: 5px;
+    border-radius: 10px;
+}
+
 .terminal-card-header {
     display: flex;
     justify-content: space-between;
+    align-items: center;
 }
 
 .epsilon-card {
@@ -410,4 +429,36 @@ input[type='number'] {
     .syntax-card-prod div {
         background-color: hsla(344, 64%, 60%, 60%);
     }
+}
+
+.hidden {
+    display: none;
+}
+
+#parse-console-btn {
+    margin: 0px auto;
+    width: 80%;
+}
+
+input[type='radio']:not(:checked) + label.bttn {
+    background-color: #800011;
+    border-color: #800011;
+    box-shadow:
+        0 0 10px #800011,
+        0 0 30px rgba(123, 22, 22, 0.3);
+}
+
+input[type='radio']:not(:checked) + label.bttn {
+    cursor: pointer;
+    box-shadow:
+        0 0 20px #800011,
+        0 0 60px #7a1515;
+}
+
+input[type='radio'] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
 }

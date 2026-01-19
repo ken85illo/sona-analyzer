@@ -18,13 +18,36 @@
     <body>
         <dialog id="parser-log">
             <div id="parser-log-container">
-                <form method="dialog">
-                    <div class="button-group" role="group">
-                        <button type="button">All</button>
-                        <button type="button">Productions</button>
-                        <button type="button">Errors</button>
+                <form method="dialog" id="parser-log-header">
+                    <div>
+                        <input
+                            type="radio"
+                            id="syntax-all"
+                            name="syntax-filter"
+                            value="all"
+                            checked
+                        />
+                        <label for="syntax-all" class="bttn">All</label>
+
+                        <input
+                            type="radio"
+                            id="syntax-prods"
+                            name="syntax-filter"
+                            value="productions"
+                        />
+                        <label for="syntax-prods" class="bttn"
+                            >Productions</label
+                        >
+
+                        <input
+                            type="radio"
+                            id="syntax-errors"
+                            name="syntax-filter"
+                            value="errors"
+                        />
+                        <label for="syntax-errors" class="bttn">Errors</label>
                     </div>
-                    <button>Close</button>
+                    <button class="bttn">Close</button>
                 </form>
                 <div id="syntax-container"></div>
             </div>
@@ -105,6 +128,9 @@
                         </tr>
                     </table>
                 </div>
+                <button type="button" class="bttn" id="parse-console-btn">
+                    PARSER CONSOLE
+                </button>
             </div>
         </div>
 

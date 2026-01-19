@@ -3,47 +3,25 @@ const table_elem = document.getElementById('lexical-elements-table')
 const loadingIndicator = document.getElementById('loading-indicator')
 const lineSpinner = document.getElementById('line-number')
 const importBtn = document.getElementById('import-btn')
-const parserDialog = document.getElementById('parser-log')
 const syntaxContainer = document.getElementById('syntax-container')
 const defaultContent = table_elem.innerHTML
-let lexicalAnalysis = null
-let syntaxAnalysis = null
-let errors = null
 let view = 0
 let highlightedLine = null
 
 const PORT = 8081
 const URL = `http://localhost:${PORT}/api/lexical-analyzer`
+lineSpinner.disabled = true
 
-const displayLexicalElements = (showAll = false) => {
+const displayLexicalElements = (lexicalAnalysis) => {
     if (lexicalAnalysis === null) return
-
-    lineSpinner.disabled = showAll
 
     let html = defaultContent
 
-    if (showAll) {
-        // Display all lines
-        for (const [line, elements] of Object.entries(lexicalAnalysis)) {
-            for (const lexical_element of elements) {
-                html += `
-                    <tr>
-                        <td>${line}</td>
-                        <td>${lexical_element.token}</td>
-                        <td>${lexical_element.lexeme}</td>
-                    </tr>
-                `
-            }
-        }
-    } else {
-        // Display only the selected line
-        const filteredLine = lexicalAnalysis[lineSpinner.value]
-        if (!filteredLine) return
-
-        for (const lexical_element of filteredLine) {
+    for (const [line, elements] of Object.entries(lexicalAnalysis)) {
+        for (const lexical_element of elements) {
             html += `
-                <tr>
-                    <td>${lineSpinner.value}</td>
+                <tr data-line="${line}">
+                    <td>${line}</td>
                     <td>${lexical_element.token}</td>
                     <td>${lexical_element.lexeme}</td>
                 </tr>
@@ -54,16 +32,18 @@ const displayLexicalElements = (showAll = false) => {
     table_elem.innerHTML = html
 }
 
-const displaySyntaxElements = () => {
+const displaySyntaxElements = (syntaxAnalysis, errors) => {
+    if (syntaxAnalysis === null) return
+
     let html = ''
 
     for (const elem of syntaxAnalysis) {
         if (elem.type === 'terminal') {
             html += `
-                <div class="syntax-card terminal-card">
+                <div class="syntax-card terminal-card" data-line="${elem.line}">
                     <div class="terminal-card-header">
                         <div>${elem.token_type}</div>
-                        <div>${elem.lexeme}</div>
+                        <div class="terminal-lexeme">${elem.lexeme}</div>
                     </div>
                     <hr/>
                     <div class="syntax-card-prod">
@@ -77,12 +57,12 @@ const displaySyntaxElements = () => {
 
             html += `
                     </div>
-                    <div class="line-number">${elem.line}</div>
+                    <div class="line-number">LINE ${elem.line}</div>
                 </div>
             `
         } else if (elem.type === 'epsilon') {
             html += `
-                <div class="syntax-card epsilon-card">
+                <div class="syntax-card epsilon-card" data-line="${elem.line}">
                     <div>EPSILON</div>
                     <hr/>
                     <div class="syntax-card-prod">
@@ -96,13 +76,13 @@ const displaySyntaxElements = () => {
 
             html += `
                     </div>
-                    <div class="line-number">${elem.line}</div>
+                    <div class="line-number">LINE ${elem.line}</div>
                 </div>
             `
         } else if (elem.type === 'error') {
             const sync = elem.synchronize
             html += `
-                <div class="syntax-card error-card">
+                <div class="syntax-card error-card" data-line="${elem.line}">
                     <div>ERROR</div>
                     <hr/>
                     <div class="error-message">${errors[String(elem.line)][elem.index]}</div>
@@ -126,7 +106,7 @@ const displaySyntaxElements = () => {
 
             html += `
                     </div>
-                    <div class="line-number">${elem.line}</div>
+                    <div class="line-number">LINE ${elem.line}</div>
                 </div>
             `
         }
@@ -137,8 +117,10 @@ const displaySyntaxElements = () => {
 
 const lexicalAnalyzer = async (text_JSON) => {
     try {
+        lineSpinner.disabled = true
         loadingIndicator.style.display = 'block'
         table_elem.innerHTML = ''
+        syntaxContainer.innerHTML = ''
 
         const rawResponse = await fetch(URL, {
             method: 'POST',
@@ -149,9 +131,9 @@ const lexicalAnalyzer = async (text_JSON) => {
         if (!rawResponse.ok) throw new Error('Server error')
 
         const response = await rawResponse.json()
-        lexicalAnalysis = response['lexical']
-        syntaxAnalysis = response['syntactical']
-        errors = response['errors']
+        const lexicalAnalysis = response['lexical']
+        const syntaxAnalysis = response['syntactical']
+        const errors = response['errors']
         console.log(lexicalAnalysis)
 
         lineSpinner.value = 1
@@ -164,8 +146,8 @@ const lexicalAnalyzer = async (text_JSON) => {
                 return max
             }, 0)
         )
-        displayLexicalElements(true) //display all elements
-        displaySyntaxElements()
+        displayLexicalElements(lexicalAnalysis) //display all elements
+        displaySyntaxElements(syntaxAnalysis, errors)
     } catch (err) {
         console.error('Fetch error:', err)
     } finally {
@@ -188,19 +170,63 @@ const editor = CodeMirror.fromTextArea(
 
 const switchView = () => {
     if (view === 0) {
-        displayLexicalElements()
         highlightEditorLine(lineSpinner.value)
+        lineSpinner.disabled = false
         view = 1
+
+        filterByLineAndType()
         return
     }
+
     editor.removeLineClass(
         highlightedLine,
         'background',
         'codemirror_highlight'
     )
-    displayLexicalElements(true)
+    lineSpinner.disabled = true
     view = 0
+    filterByLineAndType()
 }
+
+const filterByLineAndType = () => {
+    const line = lineSpinner.value
+    const filter = document.querySelector(
+        'input[name="syntax-filter"]:checked'
+    ).value
+
+    const tableElements = document.querySelectorAll('tr[data-line]')
+    const cardElements = document.querySelectorAll('.syntax-card')
+
+    const combinedElements = [...tableElements, ...cardElements]
+
+    const showAllLines = view === 0
+
+    combinedElements.forEach((elem) => {
+        const matchesLine = showAllLines || elem.dataset.line === line
+        const matchesType =
+            elem.tagName === 'TR' ||
+            filter === 'all' ||
+            (filter === 'productions' &&
+                (elem.classList.contains('terminal-card') ||
+                    elem.classList.contains('epsilon-card'))) ||
+            (filter === 'errors' && elem.classList.contains('error-card'))
+
+        if (matchesLine && matchesType) {
+            elem.classList.remove('hidden')
+        } else {
+            elem.classList.add('hidden')
+        }
+    })
+}
+
+document.querySelectorAll('input[name="syntax-filter"]').forEach((radio) => {
+    radio.addEventListener('change', filterByLineAndType)
+})
+
+lineSpinner.addEventListener('change', () => {
+    filterByLineAndType()
+    highlightEditorLine(lineSpinner.value)
+})
 
 const handleSubmit = () => {
     // Provide format of JSON to be sent
@@ -211,7 +237,6 @@ const handleSubmit = () => {
     console.log('Handle Submit')
 
     lexicalAnalyzer(text_JSON)
-    parserDialog.showModal()
 }
 
 // Adds tabs instead of manually adding white-spaces
@@ -231,11 +256,6 @@ textarea_elem.addEventListener('keydown', (e) => {
         // Move the cursor after the inserted tab
         textarea_elem.selectionStart = textarea_elem.selectionEnd = start + 1
     }
-})
-
-lineSpinner.addEventListener('change', (e) => {
-    displayLexicalElements()
-    highlightEditorLine(lineSpinner.value)
 })
 
 function highlightEditorLine(lineNumber) {
@@ -370,4 +390,9 @@ importBtn.addEventListener('change', () => {
         console.log(importBtn.files)
         reader.readAsText(importBtn.files[0])
     }
+})
+
+document.getElementById('parse-console-btn').addEventListener('click', () => {
+    filterByLineAndType()
+    document.getElementById('parser-log').showModal()
 })
