@@ -30,80 +30,69 @@ private:
 
     // Main Block
     CST sonaBase() {
-        try {
-            return tryParse("_SONA_BASE", [&](auto node) {
-                while (!isAtEnd() && !checkMain()) {
-                    if (auto list = offMainList()) {
-                        node->add(list);
-                    }
+        return tryParse("_SONA_BASE", [&](auto node) {
+            while (!isAtEnd() && !checkMain()) {
+                if (auto list = offMainList()) {
+                    node->add(list);
+                    continue;
                 }
+                break;
+            }
 
-                auto intType = consume(INT_TYPE_RESW, "Expect an 'int' type keyword for main function.");
-                node->add(TerminalNode::make(intType));
+            auto intType = consume(INT_TYPE_RESW, "Expect an 'int' type keyword for main function.");
+            node->add(TerminalNode::make(intType));
 
-                auto main = consume(IDENTIFIER, "Expect 'main' identifier for main function.");
-                node->add(TerminalNode::make(main));
+            auto main = consume(IDENTIFIER, "Expect 'main' identifier for main function.");
+            node->add(TerminalNode::make(main));
 
-                auto leftParen =
-                    consume(LEFT_PAREN_DELIM, "Expected opening parenthesis '(' for main function arguments.");
-                node->add(TerminalNode::make(leftParen));
+            auto leftParen = consume(LEFT_PAREN_DELIM, "Expected opening parenthesis '(' for main function arguments.");
+            node->add(TerminalNode::make(leftParen));
 
-                auto rightParen =
-                    consume(RIGHT_PAREN_DELIM, "Expected closing parenthesis ')' for main function arguments.");
-                node->add(TerminalNode::make(rightParen));
+            auto rightParen =
+                consume(RIGHT_PAREN_DELIM, "Expected closing parenthesis ')' for main function arguments.");
+            node->add(TerminalNode::make(rightParen));
 
-                auto leftCurly =
-                    consume(LEFT_CURLY_DELIM, "Expected opening curly brace '{' before main function body.");
-                node->add(TerminalNode::make(leftCurly));
+            auto leftCurly = consume(LEFT_CURLY_DELIM, "Expected opening curly brace '{' before main function body.");
+            node->add(TerminalNode::make(leftCurly));
 
-                node->add(body());
+            node->add(body());
 
-                auto rightCurly =
-                    consume(RIGHT_CURLY_DELIM, "Expected closing curly brace '}' after main function body.");
-                node->add(TerminalNode::make(rightCurly));
+            auto rightCurly = consume(RIGHT_CURLY_DELIM, "Expected closing curly brace '}' after main function body.");
+            node->add(TerminalNode::make(rightCurly));
 
-                return true;
-            });
-        }
-        catch (ParseError &error) {
-            return error.node;
-        }
+            return true;
+        }, false);
     }
 
     CST offMainList() {
-        try {
-            return tryParse("_OFF_MAIN_LIST", [&](auto node) {
-                // Skip all line comment and multiline comments
-                while (check(LINE_COMNT) || check(MULTILINE_COMNT)) {
-                    advance();
-                }
+        return tryParse("_OFF_MAIN_LIST", [&](auto node) {
+            // Skip all line comment and multiline comments
+            while (check(LINE_COMNT) || check(MULTILINE_COMNT)) {
+                advance();
+            }
 
-                if (auto stmt = decSign()) {
-                    node->add(stmt);
-                    return true;
-                }
-                else if (auto stmt = machStmnt()) {
-                    node->add(stmt);
-                    return true;
-                }
-                else if (auto stmt = machDec()) {
-                    node->add(stmt);
-                    return true;
-                }
-                else if (auto stmt = structStmnt()) {
-                    node->add(stmt);
-                    return true;
-                }
-                else if (auto stmt = structDec()) {
-                    node->add(stmt);
-                    return true;
-                }
-                return false;
-            });
-        }
-        catch (ParseError &error) {
-            return error.node;
-        }
+            if (auto stmt = decSign()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = machStmnt()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = machDec()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = structStmnt()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = structDec()) {
+                node->add(stmt);
+                return true;
+            }
+            return false;
+        }, false);
     }
 
     // Global + Data Type
@@ -154,7 +143,7 @@ private:
             }
             else if (auto stmt = decStmnt()) {
                 node->add(stmt);
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after.");
+                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon.");
                 node->add(TerminalNode::make(sc));
                 return true;
             }
@@ -182,63 +171,58 @@ private:
 
     // List of statements
     CST statements() {
-        try {
-            return tryParse("_STATEMENTS", [&](auto node) {
-                // Skip all line comment and multiline comments
-                while (check(LINE_COMNT) || check(MULTILINE_COMNT)) {
-                    advance();
-                }
+        return tryParse("_STATEMENTS", [&](auto node) {
+            // Skip all line comment and multiline comments
+            while (check(LINE_COMNT) || check(MULTILINE_COMNT)) {
+                advance();
+            }
 
-                if (auto stmt = decSign()) {
-                    node->add(stmt);
-                    return true;
-                }
-                else if (auto stmt = machStmnt()) {
-                    node->add(stmt);
-                    return true;
-                }
-                else if (auto stmt = machDec()) {
-                    node->add(stmt);
-                    return true;
-                }
-                else if (auto stmt = structStmnt()) {
-                    node->add(stmt);
-                    return true;
-                }
-                else if (auto stmt = structDec()) {
-                    node->add(stmt);
-                    return true;
-                }
-                else if (auto stmt = funcCall()) { // Must be called before assignment stmnt (both <id> first)
-                    node->add(stmt);
-                    auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after function call statement.");
-                    node->add(TerminalNode::make(sc));
-                    return true;
-                }
-                else if (auto stmt = assStmnt()) {
-                    node->add(stmt);
-                    auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after assignment statement.");
-                    node->add(TerminalNode::make(sc));
-                    return true;
-                }
-                else if (auto stmt = condStmnt()) {
-                    node->add(stmt);
-                    return true;
-                }
-                else if (auto stmt = iterativeStmt()) {
-                    node->add(stmt);
-                    return true;
-                }
-                else if (auto stmt = returnStmnt()) {
-                    node->add(stmt);
-                    return true;
-                }
-                return false;
-            });
-        }
-        catch (ParseError &error) {
-            return error.node;
-        }
+            if (auto stmt = decSign()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = machStmnt()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = machDec()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = structStmnt()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = structDec()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = funcCall()) { // Must be called before assignment stmnt (both <id> first)
+                node->add(stmt);
+                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after function call statement.");
+                node->add(TerminalNode::make(sc));
+                return true;
+            }
+            else if (auto stmt = assStmnt()) {
+                node->add(stmt);
+                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after assignment statement.");
+                node->add(TerminalNode::make(sc));
+                return true;
+            }
+            else if (auto stmt = condStmnt()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = iterativeStmt()) {
+                node->add(stmt);
+                return true;
+            }
+            else if (auto stmt = returnStmnt()) {
+                node->add(stmt);
+                return true;
+            }
+            return false;
+        }, false);
     }
 
     // General Return Statements
@@ -1324,8 +1308,8 @@ private:
 
             if (auto con = context()) {
                 node->add(con);
-                node->add(checkAdd(stateDec(), previous(), "Expected @states after @context declaration statement."));
-                node->add(checkAdd(startDec(), previous(), "Expected @start after @states declaration statement."));
+                node->add(stateDec());
+                node->add(startDec());
                 node->add(machBodyList());
                 return true;
             }
@@ -1471,8 +1455,8 @@ private:
                 node->add(TerminalNode::make(sc));
                 return true;
             }
-            return false;
-        });
+            throw error(previous(), "Expected @states after @context declaration statement.");
+        }, false);
     }
 
     CST startDec() {
@@ -1490,8 +1474,8 @@ private:
                 node->add(TerminalNode::make(sc));
                 return true;
             }
-            return false;
-        });
+            throw error(previous(), "Expected @start after @states declaration statement.");
+        }, false);
     }
 
     CST finalDec() {
@@ -1698,7 +1682,7 @@ private:
     }
 
     template <typename Func>
-    CST tryParse(const std::string &nodeName, Func fn) {
+    CST tryParse(const std::string &nodeName, Func fn, bool rethrow = true, TokenType delim = SEMICOLON_DELIM) {
         auto node = NonTerminalNode::make(nodeName);
 
         try {
@@ -1717,7 +1701,10 @@ private:
             }
 
             error.node = node;
-            throw;
+            if (rethrow) {
+                throw;
+            }
+            return error.node;
         }
     }
 
@@ -1862,19 +1849,13 @@ private:
                 return peek();
             }
 
+            if (isFunctionStart()) {
+                return peek();
+            }
+
             switch (peek()->type()) {
             case MACHINE_TYPE_RESW:
             case STRUCT_TYPE_RESW:
-            case INT_TYPE_RESW:
-            case FLOAT_TYPE_RESW:
-            case DOUBLE_TYPE_RESW:
-            case STRING_TYPE_RESW:
-            case BOOL_TYPE_RESW:
-            case CHAR_TYPE_RESW:
-            case VOID_TYPE_RESW:
-            case STATIC_RESW:
-            case UNSIGNED_RESW:
-            case CONST_RESW:
             case MAC_CONTEXT_RESW:
             case MAC_FINAL_RESW:
             case MAC_FINAL_STATE_RESW:
@@ -1896,5 +1877,47 @@ private:
         }
 
         return nullptr;
+    }
+
+    bool isFunctionStart() {
+        int64_t i = m_current;
+        const int64_t n = m_tokens.size();
+
+        while (i < n) {
+            auto t = m_tokens[i]->type();
+            if (t == UNSIGNED_RESW || t == CONST_RESW || t == STATIC_RESW) {
+                ++i;
+            }
+            else {
+                break;
+            }
+        }
+
+        if (i >= n) {
+            return false;
+        }
+
+        switch (m_tokens[i]->type()) {
+        case INT_TYPE_RESW:
+        case FLOAT_TYPE_RESW:
+        case DOUBLE_TYPE_RESW:
+        case STRING_TYPE_RESW:
+        case BOOL_TYPE_RESW:
+        case CHAR_TYPE_RESW:
+        case VOID_TYPE_RESW:
+            break;
+        default:
+            return false;
+        }
+
+        if (++i >= n || m_tokens[i]->type() != IDENTIFIER) {
+            return false;
+        }
+
+        if (++i >= n || m_tokens[i]->type() != LEFT_PAREN_DELIM) {
+            return false;
+        }
+
+        return true;
     }
 };
