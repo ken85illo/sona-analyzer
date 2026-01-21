@@ -149,6 +149,7 @@ const lexicalAnalyzer = async (text_JSON) => {
         )
         displayLexicalElements(lexicalAnalysis) //display all elements
         displaySyntaxElements(syntaxAnalysis, errors)
+        filterByLineAndType()
     } catch (err) {
         console.error('Fetch error:', err)
     } finally {
@@ -400,5 +401,14 @@ importBtn.addEventListener('change', () => {
 
 document.getElementById('parse-console-btn').addEventListener('click', () => {
     filterByLineAndType()
-    document.getElementById('parser-log').showModal()
+    const parserLog = document.getElementById('parser-log')
+    parserLog.show()
+
+    const modalRect = parserLog.getBoundingClientRect()
+    const x = (window.innerWidth - modalRect.width) / 2
+    const y = (window.innerHeight - modalRect.height) / 2
+
+    parserLog.style.transform = `translate(${x}px, ${y}px)`
+    parserLog.dataset.x = x
+    parserLog.dataset.y = y
 })

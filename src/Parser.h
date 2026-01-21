@@ -1075,7 +1075,7 @@ private:
                 node->add(TerminalNode::make(rightCurly));
                 return true;
             }
-            throw error(peek(), "Expected a semicolon ';' or body after function declaration.");
+            throw error(peek(), "Expected a semicolon ';' or '{' body after function declaration.");
         });
     }
 

@@ -317,13 +317,15 @@ input[type='number'] {
 }
 
 #parser-log {
-    width: 50%;
-    height: 75%;
-    margin: auto;
+    touch-action: none;
+    user-select: none;
+    width: 500px;
+    height: 500px;
     padding: 20px;
     border-radius: 20px;
     background-color: hsla(274, 72%, 6%, 80%);
     border: 1px solid #5a4754;
+    z-index: 999;
 
     overflow: hidden;
 }
