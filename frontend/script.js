@@ -117,6 +117,7 @@ const displaySyntaxElements = (syntaxAnalysis, errors) => {
 
 const lexicalAnalyzer = async (text_JSON) => {
     try {
+        view = 0
         lineSpinner.disabled = true
         loadingIndicator.style.display = 'block'
         table_elem.innerHTML = ''
@@ -188,20 +189,23 @@ const switchView = () => {
     filterByLineAndType()
 }
 
-const filterByLineAndType = () => {
+const filterByLineAndType = (syntaxOnly = false) => {
     const line = lineSpinner.value
     const filter = document.querySelector(
         'input[name="syntax-filter"]:checked'
     ).value
 
-    const tableElements = document.querySelectorAll('tr[data-line]')
     const cardElements = document.querySelectorAll('.syntax-card')
+    let allElements = cardElements
 
-    const combinedElements = [...tableElements, ...cardElements]
+    if (!syntaxOnly) {
+        const tableElements = document.querySelectorAll('tr[data-line]')
+        allElements = [...tableElements, ...cardElements]
+    }
 
     const showAllLines = view === 0
 
-    combinedElements.forEach((elem) => {
+    allElements.forEach((elem) => {
         const matchesLine = showAllLines || elem.dataset.line === line
         const matchesType =
             elem.tagName === 'TR' ||
@@ -220,7 +224,9 @@ const filterByLineAndType = () => {
 }
 
 document.querySelectorAll('input[name="syntax-filter"]').forEach((radio) => {
-    radio.addEventListener('change', filterByLineAndType)
+    radio.addEventListener('change', () => {
+        filterByLineAndType(true)
+    })
 })
 
 lineSpinner.addEventListener('change', () => {
