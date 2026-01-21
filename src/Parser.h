@@ -24,6 +24,7 @@ public:
 
 private:
     const TokenVec &m_tokens;
+    Ref<ErrorNode> lastError;
     int64_t m_current = 0;
 
     /* ================= Grammar ================= */
@@ -31,12 +32,21 @@ private:
     // Main Block
     CST sonaBase() {
         return tryParse("_SONA_BASE", [&](auto node) {
+            Ref<Token> current = nullptr;
             while (!isAtEnd() && !checkMain()) {
                 if (auto list = offMainList()) {
+
+                    // Modify last synchronize
+                    if (current && lastError) {
+                        lastError->setSychronize(current);
+                        current = nullptr;
+                    }
+
                     node->add(list);
                     continue;
                 }
-                break;
+                advance();
+                current = peek();
             }
 
             auto intType = consume(INT_TYPE_RESW, "Expect an 'int' type keyword for main function.");
@@ -60,8 +70,12 @@ private:
             auto rightCurly = consume(RIGHT_CURLY_DELIM, "Expected closing curly brace '}' after main function body.");
             node->add(TerminalNode::make(rightCurly));
 
+            if (!isAtEnd()) {
+                throw error(peek(), "Expected end of file after main function.");
+            }
+
             return true;
-        }, false);
+        }, false, false, true);
     }
 
     CST offMainList() {
@@ -1023,7 +1037,6 @@ private:
     }
 
     // [[ FUNCTION PRODUCTION RULE ]]
-
     // Function Declarations
     CST funcStmnt() {
         return tryParse("FUNC_STMNT", [&](auto node) {
@@ -1681,8 +1694,9 @@ private:
                m_tokens[m_current + 1]->lexeme() == "main";
     }
 
-    template <typename Func>
-    CST tryParse(const std::string &nodeName, Func fn, bool rethrow = true, TokenType delim = SEMICOLON_DELIM) {
+    template <TokenType delim = SEMICOLON_DELIM, typename Func>
+    CST
+    tryParse(const std::string &nodeName, Func fn, bool rethrow = true, bool checkStmnt = false, bool endFile = false) {
         auto node = NonTerminalNode::make(nodeName);
 
         try {
@@ -1696,7 +1710,8 @@ private:
                 node->add(error.node);
             }
             if (error.token) {
-                node->add(ErrorNode::make(error.token, synchronize()));
+                lastError = ErrorNode::make(error.token, synchronize(delim, checkStmnt, endFile));
+                node->add(lastError);
                 error.token = nullptr;
             }
 
@@ -1841,16 +1856,21 @@ private:
         throw error(token, "Undefined identifier or keyword");
     }
 
-    Ref<Token> synchronize() {
-        advance();
+    Ref<Token> synchronize(TokenType delim, bool checkStmnt, bool endFile) {
+        if (endFile) {
+            m_current = m_tokens.size();
+            return nullptr;
+        }
 
+        advance();
         while (!isAtEnd()) {
-            if (previous()->type() == SEMICOLON_DELIM) {
+            if (previous()->type() == delim) {
                 return peek();
             }
 
-            if (isFunctionStart()) {
-                return peek();
+            if (checkStmnt) {
+                advance();
+                continue;
             }
 
             switch (peek()->type()) {
@@ -1863,6 +1883,16 @@ private:
             case MAC_STATE_RESW:
             case MAC_STATES_RESW:
             case MAC_TRANSITIONS_RESW:
+            case UNSIGNED_RESW:
+            case CONST_RESW:
+            case STATIC_RESW:
+            case INT_TYPE_RESW:
+            case FLOAT_TYPE_RESW:
+            case DOUBLE_TYPE_RESW:
+            case STRING_TYPE_RESW:
+            case BOOL_TYPE_RESW:
+            case CHAR_TYPE_RESW:
+            case VOID_TYPE_RESW:
             case FOR_KEYW:
             case IF_RESW:
             case WHILE_KEYW:
@@ -1877,47 +1907,5 @@ private:
         }
 
         return nullptr;
-    }
-
-    bool isFunctionStart() {
-        int64_t i = m_current;
-        const int64_t n = m_tokens.size();
-
-        while (i < n) {
-            auto t = m_tokens[i]->type();
-            if (t == UNSIGNED_RESW || t == CONST_RESW || t == STATIC_RESW) {
-                ++i;
-            }
-            else {
-                break;
-            }
-        }
-
-        if (i >= n) {
-            return false;
-        }
-
-        switch (m_tokens[i]->type()) {
-        case INT_TYPE_RESW:
-        case FLOAT_TYPE_RESW:
-        case DOUBLE_TYPE_RESW:
-        case STRING_TYPE_RESW:
-        case BOOL_TYPE_RESW:
-        case CHAR_TYPE_RESW:
-        case VOID_TYPE_RESW:
-            break;
-        default:
-            return false;
-        }
-
-        if (++i >= n || m_tokens[i]->type() != IDENTIFIER) {
-            return false;
-        }
-
-        if (++i >= n || m_tokens[i]->type() != LEFT_PAREN_DELIM) {
-            return false;
-        }
-
-        return true;
     }
 };

@@ -42,7 +42,7 @@ public:
         return result;
     }
 
-    void add(CST node) {
+    void add(const CST &node) {
         m_children.push_back(node);
     }
 
@@ -136,6 +136,10 @@ public:
         };
     }
 
+    void setSychronize(const Ref<Token> &synchronize) {
+        m_synchronize = synchronize;
+    }
+
     static Ref<ErrorNode> make(const Ref<Token> &token, const Ref<Token> &synchronize) {
         return MakeRef<ErrorNode>(token, synchronize);
     }
@@ -143,5 +147,5 @@ public:
 private:
     inline static std::unordered_map<size_t, size_t> s_errorIndex;
     const size_t m_line;
-    const Ref<Token> m_synchronize;
+    Ref<Token> m_synchronize;
 };
