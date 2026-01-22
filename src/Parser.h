@@ -26,6 +26,7 @@ private:
     const TokenVec &m_tokens;
     Ref<ErrorNode> lastError;
     int64_t m_current = 0;
+    int64_t leftCurlyEnter = 0;
 
     /* ================= Grammar ================= */
 
@@ -34,19 +35,15 @@ private:
         return tryParse("_SONA_BASE", [&](auto node) {
             Ref<Token> current = nullptr;
             while (!isAtEnd() && !checkMain()) {
-                if (auto list = offMainList()) {
-
-                    // Modify last synchronize
-                    if (current && lastError) {
-                        lastError->setSychronize(current);
-                        current = nullptr;
+                // If Stuck at right curly delim
+                if (check(RIGHT_CURLY_DELIM)) {
+                    advance();
+                    if (lastError) {
+                        lastError->setSychronize(peek());
                     }
-
-                    node->add(list);
-                    continue;
                 }
-                advance();
-                current = peek();
+
+                node->add(offMainList());
             }
 
             auto intType = consume(INT_TYPE_RESW, "Expect an 'int' type keyword for main function.");
@@ -75,15 +72,12 @@ private:
             }
 
             return true;
-        }, false, false, true);
+        }, false, false);
     }
 
     CST offMainList() {
         return tryParse("_OFF_MAIN_LIST", [&](auto node) {
-            // Skip all line comment and multiline comments
-            while (check(LINE_COMNT) || check(MULTILINE_COMNT)) {
-                advance();
-            }
+            skipComments();
 
             if (auto stmt = decSign()) {
                 node->add(stmt);
@@ -105,7 +99,7 @@ private:
                 node->add(stmt);
                 return true;
             }
-            return false;
+            throw error(peek(), "Invalid off main statement.");
         }, false);
     }
 
@@ -155,7 +149,9 @@ private:
                 node->add(stmt);
                 return true;
             }
-            else if (auto stmt = decStmnt()) {
+
+            auto stmt = decStmnt();
+            if (stmt && previous()->type() != VOID_TYPE_RESW) {
                 node->add(stmt);
                 auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon.");
                 node->add(TerminalNode::make(sc));
@@ -168,11 +164,13 @@ private:
     // Body
     CST body() {
         return tryParse("_BODY", [&](auto node) {
-            while (auto stmt = statements()) {
-                node->add(stmt);
+            skipComments();
 
-                if (isAtEnd() || check(RIGHT_CURLY_DELIM)) {
-                    break;
+            while (!isAtEnd() && !check(RIGHT_CURLY_DELIM) && !isFunctionStart()) {
+                skipComments();
+
+                if (auto stmt = statements()) {
+                    node->add(stmt);
                 }
             }
 
@@ -186,16 +184,26 @@ private:
     // List of statements
     CST statements() {
         return tryParse("_STATEMENTS", [&](auto node) {
-            // Skip all line comment and multiline comments
-            while (check(LINE_COMNT) || check(MULTILINE_COMNT)) {
-                advance();
+            auto bt = m_current; // backtrack index
+
+            // Exit body if we encounter function declaration
+            if (isFunctionStart()) {
+                return false;
             }
 
-            if (auto stmt = decSign()) {
-                node->add(stmt);
+            // Declaration statement
+            auto modif = mod();
+            auto type = dt();
+
+            if (modif && type) {
+                node->add(modif);
+                node->add(type);
+                node->add(checkAdd(decStmnt(), previous(), "Expected declaration statement after data type."));
+                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after declaration statement.");
+                node->add(TerminalNode::make(sc));
                 return true;
             }
-            else if (auto stmt = machStmnt()) {
+            if (auto stmt = machStmnt()) {
                 node->add(stmt);
                 return true;
             }
@@ -218,10 +226,20 @@ private:
                 return true;
             }
             else if (auto stmt = assStmnt()) {
-                node->add(stmt);
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after assignment statement.");
-                node->add(TerminalNode::make(sc));
-                return true;
+                if (peek()->type() == SEMICOLON_DELIM) {
+                    node->add(stmt);
+                    auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after assignment statement.");
+                    node->add(TerminalNode::make(sc));
+                    return true;
+                }
+                else {
+                    m_current = bt;
+
+                    node->add(expression());
+                    auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after expression statement.");
+                    node->add(TerminalNode::make(sc));
+                    return true;
+                }
             }
             else if (auto stmt = condStmnt()) {
                 node->add(stmt);
@@ -235,7 +253,7 @@ private:
                 node->add(stmt);
                 return true;
             }
-            return false;
+            throw error(peek(), "Invalid body statement.");
         }, false);
     }
 
@@ -284,7 +302,7 @@ private:
 
                 while (auto nt = logOp()) {
                     node->add(nt);
-                    node->add(relLevel());
+                    node->add(checkAdd(relLevel(), peek(), "Expected expression after logical operator."));
                 }
                 return true;
             }
@@ -299,7 +317,7 @@ private:
 
                 while (auto nt = relOp()) {
                     node->add(nt);
-                    node->add(arithLevel());
+                    node->add(checkAdd(arithLevel(), previous(), "Expected expression after relational operator."));
                 }
                 return true;
             }
@@ -314,7 +332,7 @@ private:
 
                 while (auto nt = addOp()) {
                     node->add(nt);
-                    node->add(term());
+                    node->add(checkAdd(term(), previous(), "Expected expression after add/minus operator."));
                 }
                 return true;
             }
@@ -329,7 +347,7 @@ private:
 
                 while (auto nt = multOp()) {
                     node->add(nt);
-                    node->add(factor());
+                    node->add(checkAdd(factor(), previous(), "Expected expression after multiply/divide operator."));
                 }
                 return true;
             }
@@ -695,7 +713,7 @@ private:
             if (auto ass = match(EQUAL_ASS_OP)) {
                 node->add(TerminalNode::make(ass));
 
-                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
+                node->add(checkAdd(argList(), previous(), "Expected an expression after."));
             }
             else {
                 node->add(EpsilonNode::make(peek()));
@@ -1071,6 +1089,7 @@ private:
             else if (auto leftCurly = match(LEFT_CURLY_DELIM)) {
                 node->add(TerminalNode::make(leftCurly));
                 node->add(body());
+
                 auto rightCurly = consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after function body.");
                 node->add(TerminalNode::make(rightCurly));
                 return true;
@@ -1283,29 +1302,38 @@ private:
     }
 
     CST machStmnt() {
+        int64_t currentDepth = leftCurlyEnter;
         return tryParse("MACH_STMNT", [&](auto node) {
-            if (auto mach = match(MACHINE_TYPE_RESW)) {
-                node->add(TerminalNode::make(mach));
-                node->add(
-                    checkAdd(machType(), previous(), "Expected a machine type identifier after 'Machine' keyword.")
-                );
+            try {
+                if (auto mach = match(MACHINE_TYPE_RESW)) {
+                    node->add(TerminalNode::make(mach));
+                    node->add(
+                        checkAdd(machType(), previous(), "Expected a machine type identifier after 'Machine' keyword.")
+                    );
 
-                auto eq = consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after machine type declaration.");
-                node->add(TerminalNode::make(eq));
+                    auto eq =
+                        consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after machine type declaration.");
+                    node->add(TerminalNode::make(eq));
 
-                auto leftCurly = consume(
-                    LEFT_CURLY_DELIM,
-                    "Expected a left curly brace '{' after machine type identifier as a start of machine body."
-                );
-                node->add(TerminalNode::make(leftCurly));
+                    auto leftCurly = consume(
+                        LEFT_CURLY_DELIM,
+                        "Expected a left curly brace '{' after machine type identifier as a start of machine body."
+                    );
+                    node->add(TerminalNode::make(leftCurly));
 
-                node->add(machBody());
+                    node->add(machBody());
 
-                auto rightCurly = consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after machine body.");
-                node->add(TerminalNode::make(rightCurly));
-                return true;
+                    auto rightCurly =
+                        consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after machine body.");
+                    node->add(TerminalNode::make(rightCurly));
+                    return true;
+                }
+                return false;
             }
-            return false;
+            catch (ParseError &error) {
+                lastError->setSychronize(synchronize(false, currentDepth));
+                throw;
+            }
         });
     }
 
@@ -1469,7 +1497,7 @@ private:
                 return true;
             }
             throw error(previous(), "Expected @states after @context declaration statement.");
-        }, false);
+        });
     }
 
     CST startDec() {
@@ -1488,7 +1516,7 @@ private:
                 return true;
             }
             throw error(previous(), "Expected @start after @states declaration statement.");
-        }, false);
+        });
     }
 
     CST finalDec() {
@@ -1694,9 +1722,8 @@ private:
                m_tokens[m_current + 1]->lexeme() == "main";
     }
 
-    template <TokenType delim = SEMICOLON_DELIM, typename Func>
-    CST
-    tryParse(const std::string &nodeName, Func fn, bool rethrow = true, bool checkStmnt = false, bool endFile = false) {
+    template <typename Func>
+    CST tryParse(const std::string &nodeName, Func fn, bool rethrow = true, bool endFile = false) {
         auto node = NonTerminalNode::make(nodeName);
 
         try {
@@ -1710,7 +1737,7 @@ private:
                 node->add(error.node);
             }
             if (error.token) {
-                lastError = ErrorNode::make(error.token, synchronize(delim, checkStmnt, endFile));
+                lastError = ErrorNode::make(error.token, synchronize(endFile));
                 node->add(lastError);
                 error.token = nullptr;
             }
@@ -1757,6 +1784,7 @@ private:
         if (isAtEnd()) {
             return false;
         }
+
         return peek()->type() == type;
     }
 
@@ -1769,7 +1797,14 @@ private:
 
     Ref<Token> advance() {
         if (!isAtEnd()) {
-            ++m_current;
+            auto tok = m_tokens[m_current++];
+
+            if (tok->type() == LEFT_CURLY_DELIM) {
+                ++leftCurlyEnter;
+            }
+            else if (tok->type() == RIGHT_CURLY_DELIM) {
+                --leftCurlyEnter;
+            }
         }
         return previous();
     }
@@ -1799,113 +1834,129 @@ private:
             return;
         }
 
-        // Handle lexical unknown tokens
-        if (token->lexeme() == "++") {
-            throw error(token, "Expected an identifier paired with the operator.", "INCREMNT_OP");
-        }
-        if (token->lexeme() == "--") {
-            throw error(token, "Expected an identifier paired with the operator.", "DECREMNT_OP");
-        }
-        if (token->lexeme() == "-") {
-            throw error(token, "Expected to be used as a unary(negation) or binary(subtract) operator.", "MINUS_OP");
-        }
-        if (token->lexeme() == "+") {
-            throw error(token, "Expected to be used as a unary(positive) or binary(addition) operator.", "PLUS_OP");
-        }
-        if (token->lexeme() == "*") {
-            throw error(token, "Expected to be used as a binary(multiplication) operator.", "MULTIPLY_OP");
-        }
-        if (token->lexeme() == "/") {
-            throw error(token, "Expected to be used as a binary(division) operator.", "DIVIDE_OP");
-        }
-        if (token->lexeme() == "%") {
-            throw error(token, "Expected to be used as a binary(modulo) operator.", "MODULO_OP");
-        }
-        if (token->lexeme() == "+=") {
-            throw error(
-                token, "Invalid use of addition assignment operator (Example: x += <expression>)", "ADD_ASS_OP"
-            );
-        }
-        if (token->lexeme() == "-=") {
-            throw error(
-                token, "Invalid use of subtract assignment operator (Example: x -= <expression>)", "SUBTRCT_ASS_OP"
-            );
-        }
-        if (token->lexeme() == "*=") {
-            throw error(
-                token, "Invalid use of multiply assignment operator (Example: x *= <expression>)", "MULTPLY_ASS_OP"
-            );
-        }
-        if (token->lexeme() == "/=") {
-            throw error(
-                token, "Invalid use of divide assignment operator (Example: x /= <expression>)", "DIVIDE_ASS_OP"
-            );
-        }
-        if (token->lexeme() == "%=") {
-            throw error(
-                token, "Invalid use of modulo assignment operator (Example: x %= <expression>)", "MODULO_ASS_OP"
-            );
-        }
         if (token->lexeme()[0] == '\"') {
-            throw error(token, "Non terminated \" in a string literal (Example: \"Hello\" or \"123\")", "CHAR_LITERAL");
+            throw error(token, "Non terminated \" in a string literal (Usage: \"Hello\" or \"123\")", "CHAR_LITERAL");
         }
         if (token->lexeme()[0] == '\'') {
-            throw error(token, "Non terminated ' in a character literal (Example: 'x' or '1')", "CHAR_LITERAL");
+            throw error(token, "Non terminated ' in a character literal (Usage: 'x' or '1')", "CHAR_LITERAL");
         }
 
         throw error(token, "Undefined identifier or keyword");
     }
 
-    Ref<Token> synchronize(TokenType delim, bool checkStmnt, bool endFile) {
+    Ref<Token> synchronize(bool endFile, std::optional<int64_t> startDepthSkip = std::nullopt) {
         if (endFile) {
             m_current = m_tokens.size();
             return nullptr;
         }
 
+        auto atTopLevelRightCurly = [&]() {
+            return !startDepthSkip.has_value() && check(RIGHT_CURLY_DELIM) && leftCurlyEnter == 1;
+        };
+
+        if (atTopLevelRightCurly() || isFunctionStart()) {
+            return peek();
+        }
+
         advance();
+
         while (!isAtEnd()) {
-            if (previous()->type() == delim) {
-                return peek();
+            // skip until exit all nested blocks
+            if (startDepthSkip.has_value()) {
+                if (leftCurlyEnter > startDepthSkip) {
+                    advance();
+                    continue;
+                }
             }
 
-            if (checkStmnt) {
-                advance();
-                continue;
-            }
-
-            switch (peek()->type()) {
-            case MACHINE_TYPE_RESW:
-            case STRUCT_TYPE_RESW:
-            case MAC_CONTEXT_RESW:
-            case MAC_FINAL_RESW:
-            case MAC_FINAL_STATE_RESW:
-            case MAC_START_RESW:
-            case MAC_STATE_RESW:
-            case MAC_STATES_RESW:
-            case MAC_TRANSITIONS_RESW:
-            case UNSIGNED_RESW:
-            case CONST_RESW:
-            case STATIC_RESW:
-            case INT_TYPE_RESW:
-            case FLOAT_TYPE_RESW:
-            case DOUBLE_TYPE_RESW:
-            case STRING_TYPE_RESW:
-            case BOOL_TYPE_RESW:
-            case CHAR_TYPE_RESW:
-            case VOID_TYPE_RESW:
-            case FOR_KEYW:
-            case IF_RESW:
-            case WHILE_KEYW:
-            case RETURN_RESW:
+            if (previous()->type() == SEMICOLON_DELIM || isStatementStart() || atTopLevelRightCurly()) {
                 return peek();
-                break;
-            default:
-                break;
             }
 
             advance();
         }
 
         return nullptr;
+    }
+
+    bool isStatementStart() {
+        switch (peek()->type()) {
+        case MACHINE_TYPE_RESW:
+        case STRUCT_TYPE_RESW:
+        case MAC_CONTEXT_RESW:
+        case MAC_FINAL_RESW:
+        case MAC_FINAL_STATE_RESW:
+        case MAC_START_RESW:
+        case MAC_STATE_RESW:
+        case MAC_STATES_RESW:
+        case MAC_TRANSITIONS_RESW:
+        case UNSIGNED_RESW:
+        case CONST_RESW:
+        case STATIC_RESW:
+        case INT_TYPE_RESW:
+        case FLOAT_TYPE_RESW:
+        case DOUBLE_TYPE_RESW:
+        case STRING_TYPE_RESW:
+        case BOOL_TYPE_RESW:
+        case CHAR_TYPE_RESW:
+        case VOID_TYPE_RESW:
+        case FOR_KEYW:
+        case IF_RESW:
+        case WHILE_KEYW:
+        case RETURN_RESW:
+            return true;
+        default:
+            return false;
+            break;
+        }
+    }
+
+    bool isFunctionStart() {
+        int64_t i = m_current;
+        const int64_t n = m_tokens.size();
+
+        while (i < n) {
+            auto t = m_tokens[i]->type();
+            if (t == UNSIGNED_RESW || t == CONST_RESW || t == STATIC_RESW) {
+                ++i;
+            }
+            else {
+                break;
+            }
+        }
+
+        if (i >= n) {
+            return false;
+        }
+
+        switch (m_tokens[i]->type()) {
+        case INT_TYPE_RESW:
+        case FLOAT_TYPE_RESW:
+        case DOUBLE_TYPE_RESW:
+        case STRING_TYPE_RESW:
+        case BOOL_TYPE_RESW:
+        case CHAR_TYPE_RESW:
+        case VOID_TYPE_RESW:
+            break;
+        default:
+            return false;
+        }
+
+        if (++i >= n || m_tokens[i]->type() != IDENTIFIER) {
+            return false;
+        }
+
+        if (++i >= n || m_tokens[i]->type() != LEFT_PAREN_DELIM) {
+            return false;
+        }
+
+        return true;
+    }
+
+    void skipComments() {
+        // Skip all line comment and multiline comments
+        while (check(LINE_COMNT) || check(MULTILINE_COMNT)) {
+            advance();
+        }
     }
 };

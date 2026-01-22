@@ -370,7 +370,7 @@ function spinnerIncrement() {
 
     lineSpinner.value = Number(lineSpinner.value) + 1
 
-    displayLexicalElements()
+    filterByLineAndType()
     highlightEditorLine(lineSpinner.value)
 }
 
@@ -378,7 +378,7 @@ function spinnerDecrement() {
     if (lineSpinner.value <= 1) return
     lineSpinner.value = Number(lineSpinner.value) - 1
 
-    displayLexicalElements()
+    filterByLineAndType()
     highlightEditorLine(lineSpinner.value)
 }
 

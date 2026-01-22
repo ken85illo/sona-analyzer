@@ -10,14 +10,13 @@ class Scanner {
 
 public:
     Scanner(const std::string &source)
-    : m_source(source), m_validator(m_tokens) {}
+    : m_source(source) {}
 
     const TokenVec &scanTokens() {
         while (!isAtEnd()) {
             m_start = m_current;
             scanToken();
         }
-        m_validator.finalCheck();
 
         return m_tokens;
     }
@@ -51,8 +50,6 @@ private:
     size_t m_start = 0;
     size_t m_current = 0;
     size_t m_line = 1;
-
-    Validator m_validator;
 
     void scanToken();
     void string();
@@ -137,7 +134,6 @@ private:
     handleSignedOp(char symbol, TokenType binary, TokenType unary, TokenType post, TokenType pre, TokenType assign) {
         if (match('=')) {
             addToken(assign);
-            m_validator.pushAssignmentOp();
             return;
         }
 
@@ -145,13 +141,11 @@ private:
 
         if (match(symbol)) {
             addToken(TokenUtils::isIdentifier(prev) ? post : pre);
-            m_validator.pushDoubleUnaryOp();
             return;
         }
 
         bool isBinary = TokenUtils::isValue(prev) || prev == STR_LITERAL;
         addToken(isBinary ? binary : unary);
-        isBinary ? m_validator.pushBinaryOp() : m_validator.pushSingleUnaryOp();
     }
 
     void handlePlus() {
@@ -179,13 +173,11 @@ private:
         }
         else {
             addToken(match('=') ? DIVIDE_ASS_OP : DIVIDE_OP);
-            lastToken() == DIVIDE_ASS_OP ? m_validator.pushAssignmentOp() : m_validator.pushBinaryOp();
         }
     }
 
     void handleAsterisk() {
         addToken(match('=') ? MULTPLY_ASS_OP : MULTIPLY_OP);
-        lastToken() == MULTPLY_ASS_OP ? m_validator.pushAssignmentOp() : m_validator.pushBinaryOp();
     }
 
     void singleLineComment() {
