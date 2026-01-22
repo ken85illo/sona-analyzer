@@ -109,16 +109,10 @@ private:
             auto bt = m_current;
 
             if (auto kw = match(CONST_RESW)) {
+                node->add(TerminalNode::make(kw));
                 if (auto kwm = match(STATIC_RESW)) {
-                    node->add(TerminalNode::make(kw));
                     node->add(TerminalNode::make(kwm));
                 }
-                else {
-                    m_current = bt;
-                }
-            }
-            else if (auto kw = match(CONST_RESW)) {
-                node->add(TerminalNode::make(kw));
             }
             else if (auto kw = match(STATIC_RESW)) {
                 node->add(TerminalNode::make(kw));
@@ -166,7 +160,7 @@ private:
         return tryParse("_BODY", [&](auto node) {
             skipComments();
 
-            while (!isAtEnd() && !check(RIGHT_CURLY_DELIM) && !isFunctionStart()) {
+            while (!isAtEnd() && !check(RIGHT_CURLY_DELIM)) {
                 skipComments();
 
                 if (auto stmt = statements()) {
@@ -186,21 +180,8 @@ private:
         return tryParse("_STATEMENTS", [&](auto node) {
             auto bt = m_current; // backtrack index
 
-            // Exit body if we encounter function declaration
-            if (isFunctionStart()) {
-                return false;
-            }
-
-            // Declaration statement
-            auto modif = mod();
-            auto type = dt();
-
-            if (modif && type) {
-                node->add(modif);
-                node->add(type);
-                node->add(checkAdd(decStmnt(), previous(), "Expected declaration statement after data type."));
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after declaration statement.");
-                node->add(TerminalNode::make(sc));
+            if (auto stmt = fullDecStmt()) {
+                node->add(stmt);
                 return true;
             }
             if (auto stmt = machStmnt()) {
@@ -255,6 +236,21 @@ private:
             }
             throw error(peek(), "Invalid body statement.");
         }, false);
+    }
+
+    // Full Declaration Statement
+    CST fullDecStmt() {
+        return tryParse("FULL_DEC_STMT", [&](auto node) {
+            node->add(mod());
+            if (auto type = dt()) {
+                node->add(type);
+                node->add(checkAdd(decStmnt(), previous(), "Expected declaration statement after data type."));
+                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after declaration statement.");
+                node->add(TerminalNode::make(sc));
+                return true;
+            }
+            return false;
+        });
     }
 
     // General Return Statements
@@ -687,6 +683,7 @@ private:
                 while (auto comma = match(COMMA_OP)) {
                     node->add(TerminalNode::make(comma));
                     node->add(checkAdd(id(), previous(), "Expected another assignment expression after comma."));
+                    node->add(decTail());
                 }
 
                 return true;
@@ -701,8 +698,11 @@ private:
             if (auto tail = arrSuffix()) {
                 node->add(tail);
             }
+            else if (auto tail = varTail()) {
+                node->add(tail);
+            }
             else {
-                node->add(varTail());
+                node->add(EpsilonNode::make(peek()));
             }
             return true;
         });
@@ -916,39 +916,52 @@ private:
     // Do-While
     CST doWhileStmt() {
         return tryParse("DO_WHILE_STMT", [&](auto node) {
-            if (auto doKw = match(DO_KEYW)) {
-                node->add(TerminalNode::make(doKw));
+            try {
+                if (auto doKw = match(DO_KEYW)) {
+                    node->add(TerminalNode::make(doKw));
 
-                auto leftCurly =
-                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' before 'do while' body statement.");
-                node->add(TerminalNode::make(leftCurly));
+                    auto leftCurly = consume(
+                        LEFT_CURLY_DELIM, "Expected an opening curly brace '{' before 'do while' body statement."
+                    );
+                    node->add(TerminalNode::make(leftCurly));
 
-                node->add(body());
+                    node->add(body());
 
-                auto rightCurly =
-                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after 'do while' body statement.");
+                    auto rightCurly = consume(
+                        RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after 'do while' body statement."
+                    );
 
-                node->add(TerminalNode::make(rightCurly));
+                    node->add(TerminalNode::make(rightCurly));
 
-                auto leftParen = consume(
-                    LEFT_PAREN_DELIM,
-                    "Expected an opening parenthesis '(' after 'do while' as a start of conditional expression."
-                );
+                    auto whileKw = consume(WHILE_KEYW, "Expected a 'while' keyword after 'do' body statement.");
+                    node->add(TerminalNode::make(whileKw));
 
-                node->add(TerminalNode::make(leftParen));
-                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
+                    auto leftParen = consume(
+                        LEFT_PAREN_DELIM,
+                        "Expected an opening parenthesis '(' after 'do while' as a start of conditional expression."
+                    );
 
-                auto rightParen = consume(
-                    RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after 'do while' conditional expression."
-                );
-                node->add(TerminalNode::make(rightParen));
+                    node->add(TerminalNode::make(leftParen));
+                    node->add(checkAdd(expression(), previous(), "Expected an expression after."));
 
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after a 'do while' body statement");
-                node->add(TerminalNode::make(sc));
+                    auto rightParen = consume(
+                        RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after 'do while' conditional expression."
+                    );
+                    node->add(TerminalNode::make(rightParen));
 
-                return true;
+                    auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after a 'do while' body statement");
+                    node->add(TerminalNode::make(sc));
+
+                    return true;
+                }
+                return false;
             }
-            return false;
+            catch (ParseError &error) {
+                if (check(WHILE_KEYW)) {
+                    lastError->setSychronize(synchronize(false));
+                }
+                throw;
+            }
         });
     }
 
@@ -1227,9 +1240,6 @@ private:
 
                 while (auto body = structBody()) {
                     node->add(body);
-
-                    auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after struct member declaration.");
-                    node->add(TerminalNode::make(sc));
                 }
 
                 auto rightCurly = consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after struct body.");
@@ -1242,7 +1252,7 @@ private:
 
     CST structBody() {
         return tryParse("STRUCT_BODY", [&](auto node) {
-            if (auto stmt = decStmnt()) {
+            if (auto stmt = fullDecStmt()) {
                 node->add(stmt);
                 return true;
             }
@@ -1261,7 +1271,7 @@ private:
             if (auto type = structType()) {
                 node->add(type);
                 node->add(checkAdd(
-                    structId(), previous(), "Expected an identifier after type in a struct declartion statement."
+                    structId(), previous(), "Expected an identifier after type in a struct declaration statement."
                 ));
 
                 while (auto comma = match(COMMA_OP)) {
@@ -1271,6 +1281,8 @@ private:
                         "Expected another identifier after comma in a struct declaration statement."
                     ));
                 }
+                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after struct instance declaration.");
+                node->add(TerminalNode::make(sc));
                 return true;
             }
             return false;
@@ -1850,8 +1862,9 @@ private:
             return nullptr;
         }
 
+        auto currentDepth = leftCurlyEnter;
         auto atTopLevelRightCurly = [&]() {
-            return !startDepthSkip.has_value() && check(RIGHT_CURLY_DELIM) && leftCurlyEnter == 1;
+            return !startDepthSkip.has_value() && check(RIGHT_CURLY_DELIM) && leftCurlyEnter == currentDepth;
         };
 
         if (atTopLevelRightCurly() || isFunctionStart()) {
