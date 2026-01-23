@@ -437,6 +437,37 @@ private:
         });
     }
 
+    // String Expression
+    CST strExpr() {
+        return tryParse("STR_EXPR", [&](auto node) {
+            if (auto allChar = match(STR_LITERAL)) {
+                node->add(TerminalNode::make(allChar));
+
+                while (auto plus = match(ADD_OP)) {
+                    node->add(TerminalNode::make(plus));
+                    node->add(checkAdd(strOperand(), previous(), "expression", "after '+' "));
+                }
+
+                return true;
+            }
+            return false;
+        });
+    }
+
+    CST strOperand() {
+        return tryParse("STR_OPERAND", [&](auto node) {
+            if (auto allChar = match(STR_LITERAL)) {
+                node->add(TerminalNode::make(allChar));
+                return true;
+            }
+            else if (auto list = operand()) {
+                node->add(list);
+                return true;
+            }
+            return false;
+        });
+    }
+
     // Expression operands
     CST operand() {
         return tryParse("OPERAND", [&](auto node) {
@@ -716,7 +747,11 @@ private:
             if (auto ass = match(EQUAL_ASS_OP)) {
                 node->add(TerminalNode::make(ass));
 
-                node->add(checkAdd(argList(), previous(), "expression", "after '=' "));
+                if (auto expr = strExpr()) {
+                    node->add(expr);
+                    return true;
+                }
+                node->add(checkAdd(expression(), previous(), "expression", "after '=' "));
             }
             else {
                 node->add(EpsilonNode::make(peek()));
@@ -1125,32 +1160,12 @@ private:
 
     CST argList() {
         return tryParse("ARG_LIST", [&](auto node) {
-            if (auto allChar = match(STR_LITERAL)) {
-                node->add(TerminalNode::make(allChar));
-
-                while (auto plus = match(ADD_OP)) {
-                    node->add(TerminalNode::make(plus));
-                    node->add(checkAdd(argSingle(), previous(), "expression", "after '+' "));
-                }
-
+            if (auto expr = strExpr()) {
+                node->add(expr);
                 return true;
             }
             else if (auto expr = expression()) {
                 node->add(expr);
-                return true;
-            }
-            return false;
-        });
-    }
-
-    CST argSingle() {
-        return tryParse("ARG_SINGLE", [&](auto node) {
-            if (auto allChar = match(STR_LITERAL)) {
-                node->add(TerminalNode::make(allChar));
-                return true;
-            }
-            else if (auto list = operand()) {
-                node->add(list);
                 return true;
             }
             return false;
@@ -1281,11 +1296,8 @@ private:
     // Machine Body
     CST machBody() {
         return tryParse("MACH_BODY", [&](auto node) {
-            while (auto dec = decStmnt()) {
+            while (auto dec = fullDecStmt()) {
                 node->add(dec);
-
-                auto sc = consume(SEMICOLON_DELIM, ";", "after declaration statement");
-                node->add(TerminalNode::make(sc));
             }
 
             if (auto con = context()) {
