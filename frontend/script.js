@@ -361,6 +361,8 @@ int main() {
 
         thermometer.temperature = temperatureInput;
     }
+
+    return 0;
 }
     `)
 }

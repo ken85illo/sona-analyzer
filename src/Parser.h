@@ -78,6 +78,10 @@ private:
         return tryParse("_OFF_MAIN_LIST", [&](auto node) {
             skipComments();
 
+            if (isAtEnd()) {
+                return false;
+            }
+
             if (auto stmt = decSign()) {
                 node->add(stmt);
                 return true;
@@ -179,6 +183,10 @@ private:
     CST statements() {
         return tryParse("_STATEMENTS", [&](auto node) {
             auto bt = m_current; // backtrack index
+
+            if (isAtEnd()) {
+                return false;
+            }
 
             if (auto stmt = fullDecStmt()) {
                 node->add(stmt);
@@ -1669,12 +1677,14 @@ private:
 
         std::string msg = "Expected '";
         msg += what;
-        msg += "' but found " + foundToken(peek());
+        msg += "'";
 
         if (!context.empty()) {
             msg += " ";
             msg += context;
         }
+
+        msg += " but found " + foundToken(peek());
 
         throw error(peek(), msg);
     }
