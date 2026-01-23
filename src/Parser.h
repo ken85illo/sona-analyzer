@@ -71,7 +71,7 @@ private:
             }
 
             return true;
-        }, false, false);
+        }, false, true);
     }
 
     CST offMainList() {
@@ -271,13 +271,25 @@ private:
         return tryParse("RETURN_STMNT", [&](auto node) {
             if (auto ret = match(RETURN_RESW)) {
                 node->add(TerminalNode::make(ret));
-                node->add(checkAdd(expression(), peek(), "expression", "after 'return' keyword"));
+                node->add(returnExpr());
 
                 auto sc = consume(SEMICOLON_DELIM, ";", "after return statement");
                 node->add(TerminalNode::make(sc));
                 return true;
             }
             return false;
+        });
+    }
+
+    CST returnExpr() {
+        return tryParse("RETURN_EXPR", [&](auto node) {
+            if (auto expr = expression()) {
+                node->add(expr);
+            }
+            else {
+                node->add(EpsilonNode::make(peek()));
+            }
+            return true;
         });
     }
 

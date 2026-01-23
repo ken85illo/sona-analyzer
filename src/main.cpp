@@ -20,5 +20,5 @@ int main(int argc, char *argv[]) {
     out["syntactical"] = (!parseOut) ? ordered_json() : parseOut->toJson();
     out["errors"] = errorJson();
 
-    std::cout << out.dump();
+    std::cout << out.dump(1);
 }
