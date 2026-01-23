@@ -1755,8 +1755,8 @@ private:
 
     Ref<Token> synchronize(bool endFile, std::optional<int64_t> startDepthSkip = std::nullopt) {
         if (endFile) {
-            m_current = m_tokens.size();
-            return nullptr;
+            m_current = m_tokens.size() - 1;
+            return peek();
         }
 
         auto currentDepth = leftCurlyEnter;
@@ -1786,7 +1786,7 @@ private:
             advance();
         }
 
-        return nullptr;
+        return peek();
     }
 
     bool isStatementStart() {

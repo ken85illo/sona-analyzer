@@ -319,29 +319,29 @@ Machine Thermometer = {
 
     @state Normal = {
         maintainTemperature(temperature);
-        print("Temperature: " + temperature + "°C — Normal range.");
+        print("Temperature: " + temperature + "degrees - Normal range.");
     }
 
     @state Cold = {
         decreaseTemperature(temperature);
-        print("Temperature: " + temperature + "°C — It's cold.");
+        print("Temperature: " + temperature + "degrees - It's cold.");
     }
 
     @state Freezing = {
         decreaseTemperature(temperature);
         print("Warning: Freezing temperature!");
-        print("Temperature: " + temperature + "°C");
+        print("Temperature: " + temperature + "degrees");
     }
 
     @state Hot = {
         increaseTemperature(temperature);
-        print("Temperature: " + temperature + "°C — It's hot!");
+        print("Temperature: " + temperature + "degrees - It's hot!");
     }
 
     @state Boiling = {
         increaseTemperature(temperature);
         print("Danger: Boiling temperature!");
-        print("Temperature: " + temperature + "°C");
+        print("Temperature: " + temperature + "degrees");
     }
 
     @finalState = {
