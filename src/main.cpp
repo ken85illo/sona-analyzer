@@ -1,7 +1,5 @@
-#include "AstPrinter.h"
 #include "Parser.h"
 #include "Scanner.h"
-#include "TokenType.h"
 
 std::string readFromInput(std::istream &source) {
     std::string result = std::string(std::istreambuf_iterator<char>(source), std::istreambuf_iterator<char>());

@@ -3,7 +3,6 @@
 #include "Token.h"
 #include "TokenType.h"
 #include "TokenUtils.h"
-#include "Validator.h"
 
 class Scanner {
     using IdSet = std::unordered_set<std::string>;
