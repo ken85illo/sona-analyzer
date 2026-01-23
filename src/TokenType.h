@@ -102,4 +102,7 @@ enum TokenType {
     // User Defined token
     USER_MACHINE_RESW,
     USER_STRUCT_RESW,
+
+    // End of file
+    END_OF_FILE
 };

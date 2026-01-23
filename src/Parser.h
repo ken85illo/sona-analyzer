@@ -46,29 +46,28 @@ private:
                 node->add(offMainList());
             }
 
-            auto intType = consume(INT_TYPE_RESW, "Expect an 'int' type keyword for main function.");
+            auto intType = consume(INT_TYPE_RESW, "int", "for main function");
             node->add(TerminalNode::make(intType));
 
-            auto main = consume(IDENTIFIER, "Expect 'main' identifier for main function.");
+            auto main = consume(IDENTIFIER, "main", "as main function identifier");
             node->add(TerminalNode::make(main));
 
-            auto leftParen = consume(LEFT_PAREN_DELIM, "Expected opening parenthesis '(' for main function arguments.");
+            auto leftParen = consume(LEFT_PAREN_DELIM, "(", "before main function arguments");
             node->add(TerminalNode::make(leftParen));
 
-            auto rightParen =
-                consume(RIGHT_PAREN_DELIM, "Expected closing parenthesis ')' for main function arguments.");
+            auto rightParen = consume(RIGHT_PAREN_DELIM, ")", "after main function arguments");
             node->add(TerminalNode::make(rightParen));
 
-            auto leftCurly = consume(LEFT_CURLY_DELIM, "Expected opening curly brace '{' before main function body.");
+            auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before main function body");
             node->add(TerminalNode::make(leftCurly));
 
             node->add(body());
 
-            auto rightCurly = consume(RIGHT_CURLY_DELIM, "Expected closing curly brace '}' after main function body.");
+            auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after main function body");
             node->add(TerminalNode::make(rightCurly));
 
             if (!isAtEnd()) {
-                throw error(peek(), "Expected end of file after main function.");
+                throw error(peek(), "File must end after the main function");
             }
 
             return true;
@@ -99,7 +98,7 @@ private:
                 node->add(stmt);
                 return true;
             }
-            throw error(peek(), "Invalid off main statement.");
+            throw error(peek(), "Invalid global statement");
         }, false);
     }
 
@@ -144,14 +143,15 @@ private:
                 return true;
             }
 
+            auto prev = previous();
             auto stmt = decStmnt();
-            if (stmt && previous()->type() != VOID_TYPE_RESW) {
+            if (stmt && prev->type() != VOID_TYPE_RESW) {
                 node->add(stmt);
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon.");
+                auto sc = consume(SEMICOLON_DELIM, ";", "after declaration statement");
                 node->add(TerminalNode::make(sc));
                 return true;
             }
-            throw error(previous(), "Expected a variable or function declaration statement");
+            throw error(peek(), "Invalid end statement after variable or function declaration");
         });
     }
 
@@ -202,14 +202,14 @@ private:
             }
             else if (auto stmt = funcCall()) { // Must be called before assignment stmnt (both <id> first)
                 node->add(stmt);
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after function call statement.");
+                auto sc = consume(SEMICOLON_DELIM, ";", "after function call statement");
                 node->add(TerminalNode::make(sc));
                 return true;
             }
             else if (auto stmt = assStmnt()) {
                 if (peek()->type() == SEMICOLON_DELIM) {
                     node->add(stmt);
-                    auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after assignment statement.");
+                    auto sc = consume(SEMICOLON_DELIM, ";", "after assignment statement");
                     node->add(TerminalNode::make(sc));
                     return true;
                 }
@@ -217,7 +217,7 @@ private:
                     m_current = bt;
 
                     node->add(expression());
-                    auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after expression statement.");
+                    auto sc = consume(SEMICOLON_DELIM, ";", "after expression statement");
                     node->add(TerminalNode::make(sc));
                     return true;
                 }
@@ -234,7 +234,7 @@ private:
                 node->add(stmt);
                 return true;
             }
-            throw error(peek(), "Invalid body statement.");
+            throw error(peek(), "Invalid scoped statement");
         }, false);
     }
 
@@ -242,10 +242,15 @@ private:
     CST fullDecStmt() {
         return tryParse("FULL_DEC_STMT", [&](auto node) {
             node->add(mod());
+
+            if (check(VOID_TYPE_RESW)) {
+                return false;
+            }
+
             if (auto type = dt()) {
                 node->add(type);
-                node->add(checkAdd(decStmnt(), previous(), "Expected declaration statement after data type."));
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after declaration statement.");
+                node->add(checkAdd(decStmnt(), previous(), "assignment statement", "after data type"));
+                auto sc = consume(SEMICOLON_DELIM, ";", "after declaration statement");
                 node->add(TerminalNode::make(sc));
                 return true;
             }
@@ -258,9 +263,9 @@ private:
         return tryParse("RETURN_STMNT", [&](auto node) {
             if (auto ret = match(RETURN_RESW)) {
                 node->add(TerminalNode::make(ret));
-                node->add(checkAdd(expression(), peek(), "Expected an expression after 'return' keyword."));
+                node->add(checkAdd(expression(), peek(), "expression", "after 'return' keyword"));
 
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after return statement.");
+                auto sc = consume(SEMICOLON_DELIM, ";", "after return statement");
                 node->add(TerminalNode::make(sc));
                 return true;
             }
@@ -298,7 +303,7 @@ private:
 
                 while (auto nt = logOp()) {
                     node->add(nt);
-                    node->add(checkAdd(relLevel(), peek(), "Expected expression after logical operator."));
+                    node->add(checkAdd(relLevel(), peek(), "expression", "after logical operator"));
                 }
                 return true;
             }
@@ -313,7 +318,7 @@ private:
 
                 while (auto nt = relOp()) {
                     node->add(nt);
-                    node->add(checkAdd(arithLevel(), previous(), "Expected expression after relational operator."));
+                    node->add(checkAdd(arithLevel(), previous(), "expression", "after relational operator"));
                 }
                 return true;
             }
@@ -328,7 +333,7 @@ private:
 
                 while (auto nt = addOp()) {
                     node->add(nt);
-                    node->add(checkAdd(term(), previous(), "Expected expression after add/minus operator."));
+                    node->add(checkAdd(term(), previous(), "expression", "after add or subtract operator."));
                 }
                 return true;
             }
@@ -343,7 +348,7 @@ private:
 
                 while (auto nt = multOp()) {
                     node->add(nt);
-                    node->add(checkAdd(factor(), previous(), "Expected expression after multiply/divide operator."));
+                    node->add(checkAdd(factor(), previous(), "expression", "after multiply or divide operator"));
                 }
                 return true;
             }
@@ -360,7 +365,7 @@ private:
             else if (auto leftParen = match(LEFT_PAREN_DELIM)) {
                 node->add(TerminalNode::make(leftParen));
                 node->add(expression());
-                auto rightParen = consume(RIGHT_PAREN_DELIM, "Expect ')' after expression ");
+                auto rightParen = consume(RIGHT_PAREN_DELIM, ")", "after expression");
                 node->add(TerminalNode::make(rightParen));
                 return true;
             }
@@ -511,8 +516,8 @@ private:
         return tryParse("ID_SUFFIX", [&](auto node) {
             if (auto leftSquare = match(LEFT_SQUARE_DELIM)) {
                 node->add(TerminalNode::make(leftSquare));
-                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
-                auto rightSquare = consume(RIGHT_SQUARE_DELIM, "Expected ']' after expression");
+                node->add(checkAdd(expression(), previous(), "expression", "after '[' "));
+                auto rightSquare = consume(RIGHT_SQUARE_DELIM, "]", "after expression");
                 node->add(TerminalNode::make(rightSquare));
             }
             else {
@@ -527,9 +532,7 @@ private:
         return tryParse("MEMBER_SUFFIX", [&](auto node) {
             if (auto dot = match(DOT_OP)) {
                 node->add(TerminalNode::make(dot));
-                node->add(
-                    checkAdd(id(), previous(), "Expected an identifier after dot operator '.' for member accessor.")
-                );
+                node->add(checkAdd(id(), previous(), "identifier", "after '.' "));
                 node->add(idSuffix());
             }
             else {
@@ -631,7 +634,7 @@ private:
 
                 while (auto comma = match(COMMA_OP)) {
                     node->add(TerminalNode::make(comma));
-                    node->add(checkAdd(assSingle(), previous(), "Expected another assignment expression after comma."));
+                    node->add(checkAdd(assSingle(), previous(), "assignment statement", "after ',' "));
                 }
 
                 return true;
@@ -660,7 +663,7 @@ private:
         return tryParse("ASS_TAIL", [&](auto node) {
             if (auto op = assOp()) {
                 node->add(op);
-                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
+                node->add(checkAdd(expression(), previous(), "expression", "after assignment operator"));
             }
             else if (auto op = unaryAssOp()) {
                 node->add(op);
@@ -682,7 +685,7 @@ private:
 
                 while (auto comma = match(COMMA_OP)) {
                     node->add(TerminalNode::make(comma));
-                    node->add(checkAdd(id(), previous(), "Expected another assignment expression after comma."));
+                    node->add(checkAdd(id(), previous(), "assignment statement", "after ',' "));
                     node->add(decTail());
                 }
 
@@ -713,7 +716,7 @@ private:
             if (auto ass = match(EQUAL_ASS_OP)) {
                 node->add(TerminalNode::make(ass));
 
-                node->add(checkAdd(argList(), previous(), "Expected an expression after."));
+                node->add(checkAdd(argList(), previous(), "expression", "after '=' "));
             }
             else {
                 node->add(EpsilonNode::make(peek()));
@@ -727,7 +730,7 @@ private:
             if (auto leftSquare = match(LEFT_SQUARE_DELIM)) {
                 node->add(TerminalNode::make(leftSquare));
                 node->add(expression());
-                auto rightSquare = consume(RIGHT_SQUARE_DELIM, "Expected a closing square bracket ']'.");
+                auto rightSquare = consume(RIGHT_SQUARE_DELIM, "]", "after expression");
                 node->add(TerminalNode::make(rightSquare));
                 node->add(arrTail());
                 return true;
@@ -741,19 +744,17 @@ private:
             if (auto equal = match(EQUAL_ASS_OP)) {
                 node->add(TerminalNode::make(equal));
 
-                auto leftCurly =
-                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' when declaring arrays.");
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before array initializer");
                 node->add(TerminalNode::make(leftCurly));
 
-                node->add(TerminalNode::make(leftCurly));
-                node->add(checkAdd(operand(), previous(), "Expected an operand after left curly brace '{'."));
+                node->add(checkAdd(operand(), previous(), "operand", "after '{' "));
 
                 while (auto comma = match(COMMA_OP)) {
                     node->add(TerminalNode::make(comma));
-                    node->add(checkAdd(operand(), previous(), "Expected an operand after comma."));
+                    node->add(checkAdd(operand(), previous(), "operand", "after ',' "));
                 }
 
-                auto rightCurly = consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}'.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after array initializer");
                 node->add(TerminalNode::make(rightCurly));
             }
             else {
@@ -781,25 +782,19 @@ private:
             if (auto ifkw = match(IF_RESW)) {
                 node->add(TerminalNode::make(ifkw));
 
-                auto leftParen = consume(
-                    LEFT_PAREN_DELIM,
-                    "Expected an opening parenthesis '(' after 'if' keyword as a start of conditional expression."
-                );
+                auto leftParen = consume(LEFT_PAREN_DELIM, "(", "after 'if' keyword.");
                 node->add(TerminalNode::make(leftParen));
-                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
+                node->add(checkAdd(expression(), previous(), "expression", "after '(' "));
 
-                auto rightParen =
-                    consume(RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after 'if' expression.");
+                auto rightParen = consume(RIGHT_PAREN_DELIM, ")", "after expression");
                 node->add(TerminalNode::make(rightParen));
 
-                auto leftCurly =
-                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' before 'if' body statement.");
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before 'if' body statement");
                 node->add(TerminalNode::make(leftCurly));
 
                 node->add(body());
 
-                auto rightCurly =
-                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after 'if' body statement.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after 'if' body statement");
                 node->add(TerminalNode::make(rightCurly));
 
                 node->add(elseStmnt());
@@ -815,38 +810,30 @@ private:
             if (auto elifRw = match(ELIF_RESW)) {
                 node->add(TerminalNode::make(elifRw));
 
-                auto leftParen = consume(
-                    LEFT_PAREN_DELIM,
-                    "Expected an opening parenthesis '(' after 'elif' keyword as a start of conditional expression."
-                );
+                auto leftParen = consume(LEFT_PAREN_DELIM, "(", "after 'elif' keyword");
                 node->add(TerminalNode::make(leftParen));
-                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
+                node->add(checkAdd(expression(), previous(), "expression", "after '(' "));
 
-                auto rightParen =
-                    consume(RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after 'elif' expression.");
+                auto rightParen = consume(RIGHT_PAREN_DELIM, ")", "after expression");
                 node->add(TerminalNode::make(rightParen));
 
-                auto leftCurly =
-                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' before 'elif' body statement.");
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before 'elif' body statement");
                 node->add(TerminalNode::make(leftCurly));
 
                 node->add(body());
 
-                auto rightCurly =
-                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after 'elif' body statement.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after 'elif' body statement");
                 node->add(TerminalNode::make(rightCurly));
 
                 node->add(elseStmnt());
             }
             else if (auto elseRw = match(ELSE_RESW)) {
-                auto leftCurly =
-                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' before 'else' body statement.");
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before 'else' body statement");
                 node->add(TerminalNode::make(leftCurly));
 
                 node->add(body());
 
-                auto rightCurly =
-                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after 'else' body statement.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after 'else' body statement.");
                 node->add(TerminalNode::make(rightCurly));
 
                 node->add(elseStmnt());
@@ -886,26 +873,19 @@ private:
             if (auto whileKw = match(WHILE_KEYW)) {
                 node->add(TerminalNode::make(whileKw));
 
-                auto leftParen = consume(
-                    LEFT_PAREN_DELIM,
-                    "Expected an opening parenthesis '(' after 'while' keyword as a start of conditional expression."
-                );
+                auto leftParen = consume(LEFT_PAREN_DELIM, "(", "after 'while' keyword");
                 node->add(TerminalNode::make(leftParen));
-                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
+                node->add(checkAdd(expression(), previous(), "expression", "after '(' "));
 
-                auto rightParen = consume(
-                    RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after 'while' conditional expression."
-                );
+                auto rightParen = consume(RIGHT_PAREN_DELIM, ")", "after expression");
                 node->add(TerminalNode::make(rightParen));
 
-                auto leftCurly =
-                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' before 'while' body statement.");
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before 'while' body statement");
                 node->add(TerminalNode::make(leftCurly));
 
                 node->add(body());
 
-                auto rightCurly =
-                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after 'while' body statement.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after 'while' body statement");
                 node->add(TerminalNode::make(rightCurly));
                 return true;
             }
@@ -920,36 +900,27 @@ private:
                 if (auto doKw = match(DO_KEYW)) {
                     node->add(TerminalNode::make(doKw));
 
-                    auto leftCurly = consume(
-                        LEFT_CURLY_DELIM, "Expected an opening curly brace '{' before 'do while' body statement."
-                    );
+                    auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before 'do while' body statement.");
                     node->add(TerminalNode::make(leftCurly));
 
                     node->add(body());
 
-                    auto rightCurly = consume(
-                        RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after 'do while' body statement."
-                    );
+                    auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after 'do while' body statement.");
 
                     node->add(TerminalNode::make(rightCurly));
 
-                    auto whileKw = consume(WHILE_KEYW, "Expected a 'while' keyword after 'do' body statement.");
+                    auto whileKw = consume(WHILE_KEYW, "while", "keyword after '}' ");
                     node->add(TerminalNode::make(whileKw));
 
-                    auto leftParen = consume(
-                        LEFT_PAREN_DELIM,
-                        "Expected an opening parenthesis '(' after 'do while' as a start of conditional expression."
-                    );
+                    auto leftParen = consume(LEFT_PAREN_DELIM, "(", "after 'while' keyword.");
 
                     node->add(TerminalNode::make(leftParen));
-                    node->add(checkAdd(expression(), previous(), "Expected an expression after."));
+                    node->add(checkAdd(expression(), previous(), "expression", "after '(' "));
 
-                    auto rightParen = consume(
-                        RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after 'do while' conditional expression."
-                    );
+                    auto rightParen = consume(RIGHT_PAREN_DELIM, ")", "after expression");
                     node->add(TerminalNode::make(rightParen));
 
-                    auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after a 'do while' body statement");
+                    auto sc = consume(SEMICOLON_DELIM, ";", "after 'do while' statement");
                     node->add(TerminalNode::make(sc));
 
                     return true;
@@ -971,34 +942,27 @@ private:
             if (auto forKw = match(FOR_KEYW)) {
                 node->add(TerminalNode::make(forKw));
 
-                auto leftParen = consume(
-                    LEFT_PAREN_DELIM,
-                    "Expected an opening parenthesis '(' after 'for' keyword as a start of for statement expression."
-                );
+                auto leftParen = consume(LEFT_PAREN_DELIM, "(", "after 'for' keyword");
                 node->add(TerminalNode::make(leftParen));
 
                 node->add(forInit());
-                auto scFirst = consume(SEMICOLON_DELIM, "Expected a semicolon ';' after for init expression.");
+                auto scFirst = consume(SEMICOLON_DELIM, ";", "after initializer");
                 node->add(TerminalNode::make(scFirst));
 
-                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
-                auto scSecond = consume(SEMICOLON_DELIM, "Expected a semicolon ';' after for condition expression.");
+                node->add(checkAdd(expression(), previous(), "expression", "to be the condition"));
+                auto scSecond = consume(SEMICOLON_DELIM, ";", "after condition.");
                 node->add(TerminalNode::make(scSecond));
 
                 node->add(forCounter());
-
-                auto rightParen =
-                    consume(RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after 'for' statement expression.");
+                auto rightParen = consume(RIGHT_PAREN_DELIM, ")", "after counter");
                 node->add(TerminalNode::make(rightParen));
 
-                auto leftCurly =
-                    consume(LEFT_CURLY_DELIM, "Expected an opening curly brace '{' before 'for' body statement.");
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before 'for' body statement.");
                 node->add(TerminalNode::make(leftCurly));
 
                 node->add(body());
 
-                auto rightCurly =
-                    consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after 'for' body statement.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after 'for' body statement.");
                 node->add(TerminalNode::make(rightCurly));
                 return true;
             }
@@ -1010,16 +974,11 @@ private:
         return tryParse("FOR_INIT", [&](auto node) {
             if (auto type = dt()) {
                 node->add(type);
-                node->add(
-                    checkAdd(forDec(), previous(), "Expected an identifier in 'for' init declaration statement.")
-                );
+                node->add(checkAdd(forDec(), previous(), "assignment statement", "after data type"));
 
                 while (auto comma = match(COMMA_OP)) {
                     node->add(TerminalNode::make(comma));
-                    node->add(checkAdd(
-                        forDec(), previous(),
-                        "Expected another declaration in 'for' init declaration statement after comma ','"
-                    ));
+                    node->add(checkAdd(forDec(), previous(), "assignment statement", "after ',' "));
                 }
             }
             else {
@@ -1046,7 +1005,7 @@ private:
         return tryParse("FOR_DEC_TAIL", [&](auto node) {
             if (auto equal = match(EQUAL_ASS_OP)) {
                 node->add(TerminalNode::make(equal));
-                node->add(checkAdd(expression(), previous(), "Expected an expression after."));
+                node->add(checkAdd(expression(), previous(), "expression", "after '=' "));
             }
             else {
                 node->add(EpsilonNode::make(peek()));
@@ -1078,10 +1037,7 @@ private:
                     node->add(TerminalNode::make(leftParen));
                     node->add(paramList());
 
-                    auto rightParen = consume(
-                        RIGHT_PAREN_DELIM,
-                        "Expected a closing parenthesis ')' after  function declaration parameter list."
-                    );
+                    auto rightParen = consume(RIGHT_PAREN_DELIM, ")", "after function parameter list");
 
                     node->add(TerminalNode::make(rightParen));
                     node->add(funcStmtSuffix());
@@ -1103,11 +1059,11 @@ private:
                 node->add(TerminalNode::make(leftCurly));
                 node->add(body());
 
-                auto rightCurly = consume(RIGHT_CURLY_DELIM, "Expected a closing curly brace '}' after function body.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after function body");
                 node->add(TerminalNode::make(rightCurly));
                 return true;
             }
-            throw error(peek(), "Expected a semicolon ';' or '{' body after function declaration.");
+            throw error(peek(), "Invalid end statement for variable or function declaration");
         });
     }
 
@@ -1115,15 +1071,11 @@ private:
         return tryParse("PARAM_LIST", [&](auto node) {
             if (auto type = dt()) {
                 node->add(type);
-                node->add(checkAdd(id(), previous(), "Expected an identifier for a function parameter declaration."));
+                node->add(checkAdd(id(), previous(), "identifier", "after data type"));
 
                 while (auto comma = match(COMMA_OP)) {
-                    node->add(checkAdd(
-                        dt(), previous(), "Expected a data type after comma ',' for function parameter declaration."
-                    ));
-                    node->add(
-                        checkAdd(id(), previous(), "Expected an identifier for a function parameter declaration.")
-                    );
+                    node->add(checkAdd(dt(), previous(), "declaration statement", "after ',' "));
+                    node->add(checkAdd(id(), previous(), "identifier", "after data type"));
                 }
             }
             else {
@@ -1143,9 +1095,7 @@ private:
                     node->add(TerminalNode::make(leftParen));
 
                     node->add(args());
-                    auto rightParen = consume(
-                        RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after a function call argument list."
-                    );
+                    auto rightParen = consume(RIGHT_PAREN_DELIM, ")", "after function argument list");
                     node->add(TerminalNode::make(rightParen));
                     return true;
                 }
@@ -1163,9 +1113,7 @@ private:
 
                 while (auto comma = match(COMMA_OP)) {
                     node->add(TerminalNode::make(comma));
-                    node->add(checkAdd(
-                        argList(), previous(), "Expected another argument after comma ',' inside function call."
-                    ));
+                    node->add(checkAdd(argList(), previous(), "argument", "after ',' "));
                 }
             }
             else {
@@ -1182,10 +1130,7 @@ private:
 
                 while (auto plus = match(ADD_OP)) {
                     node->add(TerminalNode::make(plus));
-                    node->add(checkAdd(
-                        argSingle(), previous(),
-                        "Expected another argument after addition operator '+' inside function call."
-                    ));
+                    node->add(checkAdd(argSingle(), previous(), "expression", "after '+' "));
                 }
 
                 return true;
@@ -1228,21 +1173,16 @@ private:
         return tryParse("STRUCT_STMNT", [&](auto node) {
             if (auto kw = match(STRUCT_TYPE_RESW)) {
                 node->add(TerminalNode::make(kw));
-                node->add(
-                    checkAdd(structType(), previous(), "Expected a struct type identifier after 'struct' keyword.")
-                );
+                node->add(checkAdd(structType(), previous(), "identifier", "after 'struct' keyword."));
 
-                auto leftCurly = consume(
-                    LEFT_CURLY_DELIM,
-                    "Expected a left curly brace '{' after struct type identifier as a start of struct body."
-                );
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before struct body.");
                 node->add(TerminalNode::make(leftCurly));
 
                 while (auto body = structBody()) {
                     node->add(body);
                 }
 
-                auto rightCurly = consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after struct body.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after struct body.");
                 node->add(TerminalNode::make(rightCurly));
                 return true;
             }
@@ -1270,18 +1210,13 @@ private:
         return tryParse("STRUCT_DEC", [&](auto node) {
             if (auto type = structType()) {
                 node->add(type);
-                node->add(checkAdd(
-                    structId(), previous(), "Expected an identifier after type in a struct declaration statement."
-                ));
+                node->add(checkAdd(structId(), previous(), "identifier", "after data type"));
 
                 while (auto comma = match(COMMA_OP)) {
                     node->add(TerminalNode::make(comma));
-                    node->add(checkAdd(
-                        structId(), previous(),
-                        "Expected another identifier after comma in a struct declaration statement."
-                    ));
+                    node->add(checkAdd(structId(), previous(), "identifier", "after ',' "));
                 }
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon after struct instance declaration.");
+                auto sc = consume(SEMICOLON_DELIM, ";", "after struct instance declaration");
                 node->add(TerminalNode::make(sc));
                 return true;
             }
@@ -1315,38 +1250,32 @@ private:
 
     CST machStmnt() {
         int64_t currentDepth = leftCurlyEnter;
-        return tryParse("MACH_STMNT", [&](auto node) {
-            try {
+
+        try {
+            return tryParse("MACH_STMNT", [&](auto node) {
                 if (auto mach = match(MACHINE_TYPE_RESW)) {
                     node->add(TerminalNode::make(mach));
-                    node->add(
-                        checkAdd(machType(), previous(), "Expected a machine type identifier after 'Machine' keyword.")
-                    );
+                    node->add(checkAdd(machType(), previous(), "identifier", "after 'Machine' keyword."));
 
-                    auto eq =
-                        consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after machine type declaration.");
+                    auto eq = consume(EQUAL_ASS_OP, "=", "after machine declaration");
                     node->add(TerminalNode::make(eq));
 
-                    auto leftCurly = consume(
-                        LEFT_CURLY_DELIM,
-                        "Expected a left curly brace '{' after machine type identifier as a start of machine body."
-                    );
+                    auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before machine body");
                     node->add(TerminalNode::make(leftCurly));
 
                     node->add(machBody());
 
-                    auto rightCurly =
-                        consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after machine body.");
+                    auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after machine body");
                     node->add(TerminalNode::make(rightCurly));
                     return true;
                 }
                 return false;
-            }
-            catch (ParseError &error) {
-                lastError->setSychronize(synchronize(false, currentDepth));
-                throw;
-            }
-        });
+            });
+        }
+        catch (ParseError &error) {
+            lastError->setSychronize(synchronize(false, currentDepth));
+            throw;
+        }
     }
 
     // Machine Body
@@ -1355,7 +1284,7 @@ private:
             while (auto dec = decStmnt()) {
                 node->add(dec);
 
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon ';' after declaration statement.");
+                auto sc = consume(SEMICOLON_DELIM, ";", "after declaration statement");
                 node->add(TerminalNode::make(sc));
             }
 
@@ -1368,8 +1297,9 @@ private:
             }
 
             throw error(
-                previous(), "Expected machine body statement after open curly brace '{' (Base order: @context, "
-                            "@states, @start, @transitions, @state)"
+                previous(),
+                "Machine body should not be empty and should follow the base order from top to bottom: @context, "
+                "@states, @start, @transitions, @state"
             );
         });
     }
@@ -1387,8 +1317,8 @@ private:
                 return true;
             }
             throw error(
-                peek(), "Expected at least a @transitions declaration and a @state body declaration after @start for a "
-                        "base machine (@transitions body must come first)."
+                peek(), "Machine should at least have a @transitions and @state declaration"
+                        "(@transitions should ALWAYS be first)."
             );
         });
     }
@@ -1397,9 +1327,7 @@ private:
         return tryParse("BASE_MACH", [&](auto node) {
             if (auto trans = transDec()) {
                 node->add(trans);
-                node->add(
-                    checkAdd(stateBodyDec(), previous(), "Expected a @state body declaration after @transitions.")
-                );
+                node->add(checkAdd(stateBodyDec(), previous(), "@state declaration", "after @transitions"));
                 while (auto dec = stateBodyDec()) {
                     node->add(dec);
                 }
@@ -1413,7 +1341,7 @@ private:
         return tryParse("FINAL_MACH", [&](auto node) {
             if (auto final = finalDec()) {
                 node->add(final);
-                node->add(checkAdd(baseMach(), previous(), "Expected a @transitions body declaration after @final."));
+                node->add(checkAdd(baseMach(), previous(), "@transitions declaration", "after @final"));
                 node->add(finalSuffix());
                 return true;
             }
@@ -1439,20 +1367,15 @@ private:
             if (auto con = match(MAC_CONTEXT_RESW)) {
                 node->add(TerminalNode::make(con));
 
-                auto equal = consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after @context declaration.");
+                auto equal = consume(EQUAL_ASS_OP, "=", "after '@context' keyword");
                 node->add(TerminalNode::make(equal));
 
-                auto leftCurly = consume(
-                    LEFT_CURLY_DELIM, "Expected a left curly brace '{' after assignment operator of @context as a "
-                                      "start of declaration statements."
-                );
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before @context body");
                 node->add(TerminalNode::make(leftCurly));
 
                 node->add(contextVar());
 
-                auto rightCurly = consume(
-                    RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after @context declaration statements."
-                );
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after @context body");
                 node->add(TerminalNode::make(rightCurly));
                 return true;
             }
@@ -1466,13 +1389,11 @@ private:
 
             if (auto type = dt()) {
                 node->add(type);
-                node->add(
-                    checkAdd(decStmnt(), previous(), "Expected an identifier for variable declaration in @context.")
-                );
+                node->add(checkAdd(decStmnt(), previous(), "identifier", "after data type"));
                 return true;
             }
 
-            throw error(previous(), "Expected a variable declaration inside @context statement.");
+            throw error(previous(), "Machine @context body must have a variable declaration");
         });
     }
 
@@ -1481,34 +1402,30 @@ private:
             if (auto st = match(MAC_STATES_RESW)) {
                 node->add(TerminalNode::make(st));
 
-                auto equal = consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after @states declaration.");
+                auto equal = consume(EQUAL_ASS_OP, "=", "after '@states' keyword");
                 node->add(TerminalNode::make(equal));
 
-                auto leftCurly = consume(
-                    LEFT_CURLY_DELIM, "Expected a left curly brace '{' after assignment operator of @states as a "
-                                      "start of state identifier list."
-                );
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before @states identifier list");
                 node->add(TerminalNode::make(leftCurly));
 
-                auto firstId = consume(STR_LITERAL, "Expected a state identifier inside @states declaration.");
+                auto firstId = consume(STR_LITERAL, "string literal", "after '{' ");
                 node->add(TerminalNode::make(firstId));
 
                 while (auto comma = match(COMMA_OP)) {
                     node->add(TerminalNode::make(comma));
 
-                    auto nextId = consume(STR_LITERAL, "Expected another state identifier after comma operator.");
+                    auto nextId = consume(STR_LITERAL, "string literal", "after ',' ");
                     node->add(TerminalNode::make(nextId));
                 }
 
-                auto rightCurly =
-                    consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after @states identifier list.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after @states identifier list");
                 node->add(TerminalNode::make(rightCurly));
 
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon ';' after @states declaration statement.");
+                auto sc = consume(SEMICOLON_DELIM, ";", "after @states declaration");
                 node->add(TerminalNode::make(sc));
                 return true;
             }
-            throw error(previous(), "Expected @states after @context declaration statement.");
+            throw error(previous(), "Machine must have @states declaration after @context.");
         });
     }
 
@@ -1517,17 +1434,17 @@ private:
             if (auto st = match(MAC_START_RESW)) {
                 node->add(TerminalNode::make(st));
 
-                auto equal = consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after @start declaration.");
+                auto equal = consume(EQUAL_ASS_OP, "=", "after '@start' keyword");
                 node->add(TerminalNode::make(equal));
 
-                auto ident = consume(STR_LITERAL, "Expected state identifier for @start declaration.");
+                auto ident = consume(STR_LITERAL, "string literal", "after '=' ");
                 node->add(TerminalNode::make(ident));
 
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon ';' after @start declaration statement.");
+                auto sc = consume(SEMICOLON_DELIM, ";", "after @start declaration");
                 node->add(TerminalNode::make(sc));
                 return true;
             }
-            throw error(previous(), "Expected @start after @states declaration statement.");
+            throw error(previous(), "Machine must have @start declaration after @states");
         });
     }
 
@@ -1536,30 +1453,26 @@ private:
             if (auto final = match(MAC_FINAL_RESW)) {
                 node->add(TerminalNode::make(final));
 
-                auto equal = consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after @final declaration.");
+                auto equal = consume(EQUAL_ASS_OP, "=", "after '@final' keyword");
                 node->add(TerminalNode::make(equal));
 
-                auto leftCurly = consume(
-                    LEFT_CURLY_DELIM, "Expected a left curly brace '{' after assignment operator of @final as a "
-                                      "start of state identifier list."
-                );
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before @final identifier list");
                 node->add(TerminalNode::make(leftCurly));
 
-                auto firstId = consume(STR_LITERAL, "Expected a state identifier inside @final declaration.");
+                auto firstId = consume(STR_LITERAL, "string literal", "after '{' ");
                 node->add(TerminalNode::make(firstId));
 
                 while (auto comma = match(COMMA_OP)) {
                     node->add(TerminalNode::make(comma));
 
-                    auto nextId = consume(STR_LITERAL, "Expected another state identifier after comma operator.");
+                    auto nextId = consume(STR_LITERAL, "string literal", "after ',' ");
                     node->add(TerminalNode::make(nextId));
                 }
 
-                auto rightCurly =
-                    consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after @final identifier list.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after @final identifier list");
                 node->add(TerminalNode::make(rightCurly));
 
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon ';' after @final declaration statement.");
+                auto sc = consume(SEMICOLON_DELIM, ";", "after @final declaration");
                 node->add(TerminalNode::make(sc));
                 return true;
             }
@@ -1572,14 +1485,10 @@ private:
             if (auto trans = match(MAC_TRANSITIONS_RESW)) {
                 node->add(TerminalNode::make(trans));
 
-                auto equal =
-                    consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after @transitions declaration.");
+                auto equal = consume(EQUAL_ASS_OP, "=", "after '@transitions' keyword");
                 node->add(TerminalNode::make(equal));
 
-                auto leftCurly = consume(
-                    LEFT_CURLY_DELIM, "Expected a left curly brace '{' after assignment operator of @transitions as a "
-                                      "start of transition list."
-                );
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "after @transitions list");
                 node->add(TerminalNode::make(leftCurly));
 
                 if (auto trans = transition()) {
@@ -1593,8 +1502,7 @@ private:
                     node->add(trans);
                 }
 
-                auto rightCurly =
-                    consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after @transitions list.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after @transitions list.");
                 node->add(TerminalNode::make(rightCurly));
 
                 return true;
@@ -1608,31 +1516,24 @@ private:
             if (auto leftParen = match(LEFT_PAREN_DELIM)) {
                 node->add(TerminalNode::make(leftParen));
 
-                auto ident = consume(STR_LITERAL, "Expected an initial state identifier for a transition statement.");
+                auto ident = consume(STR_LITERAL, "string literal", "after '(' ");
                 node->add(TerminalNode::make(ident));
 
-                auto comma =
-                    consume(COMMA_OP, "Expected a comma after initial state identifier in transition statement.");
+                auto comma = consume(COMMA_OP, ",", "after string literal");
                 node->add(TerminalNode::make(comma));
 
-                node->add(
-                    checkAdd(expression(), previous(), "Expected an expression after comma in transition statement.")
-                );
+                node->add(checkAdd(expression(), previous(), "expression", "after ',' "));
 
-                auto rightParen =
-                    consume(RIGHT_PAREN_DELIM, "Expected a closing parenthesis ')' after transition expression.");
+                auto rightParen = consume(RIGHT_PAREN_DELIM, ")", "after expression");
                 node->add(TerminalNode::make(rightParen));
 
-                auto equal = consume(EQUAL_ASS_OP, "Expected an assignment operator '=' for a transition statement.");
+                auto equal = consume(EQUAL_ASS_OP, "=", "after ')'");
                 node->add(TerminalNode::make(equal));
 
-                auto output = consume(
-                    STR_LITERAL,
-                    "Expected an output state identifier after assignment operator '=' in a transition statement."
-                );
+                auto output = consume(STR_LITERAL, "string literal", "after '=' ");
                 node->add(TerminalNode::make(output));
 
-                auto sc = consume(SEMICOLON_DELIM, "Expected a semicolon ';' after transition statement.");
+                auto sc = consume(SEMICOLON_DELIM, ";", "after @transitions statement.");
                 node->add(TerminalNode::make(sc));
                 return true;
             }
@@ -1645,24 +1546,17 @@ private:
             if (auto dec = match(MAC_STATE_RESW)) {
                 node->add(TerminalNode::make(dec));
 
-                node->add(checkAdd(
-                    id(), previous(),
-                    "Expected an identifier after '@state' keyword in state body declaration statement."
-                ));
+                node->add(checkAdd(id(), previous(), "identifier", "after '@state' keyword"));
 
-                auto equal = consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after @state declaration.");
+                auto equal = consume(EQUAL_ASS_OP, "=", "after @state declaration");
                 node->add(TerminalNode::make(equal));
 
-                auto leftCurly = consume(
-                    LEFT_CURLY_DELIM, "Expected a left curly brace '{' after assignment operator of @state as a "
-                                      "start of state function body."
-                );
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before @state function body");
                 node->add(TerminalNode::make(leftCurly));
 
                 node->add(body());
 
-                auto rightCurly =
-                    consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after @state function body.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after @state function body");
                 node->add(TerminalNode::make(rightCurly));
 
                 return true;
@@ -1676,20 +1570,15 @@ private:
             if (auto final = match(MAC_FINAL_STATE_RESW)) {
                 node->add(TerminalNode::make(final));
 
-                auto equal =
-                    consume(EQUAL_ASS_OP, "Expected an assignment operator '=' after @finalState declaration.");
+                auto equal = consume(EQUAL_ASS_OP, "=", "after '@finalState' keyword");
                 node->add(TerminalNode::make(equal));
 
-                auto leftCurly = consume(
-                    LEFT_CURLY_DELIM, "Expected a left curly brace '{' after assignment operator of @finalState as a "
-                                      "start of final state function body."
-                );
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "after @finalState function body");
                 node->add(TerminalNode::make(leftCurly));
 
                 node->add(body());
 
-                auto rightCurly =
-                    consume(RIGHT_CURLY_DELIM, "Expected a right curly brace '}' after @finalState function body.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after @finalState function body");
                 node->add(TerminalNode::make(rightCurly));
 
                 return true;
@@ -1704,22 +1593,14 @@ private:
             if (auto mach = machType()) {
                 node->add(mach);
 
-                node->add(checkAdd(
-                    id(), previous(),
-                    "Expected an identifier after machine type in a machine instance declaration statement."
-                ));
+                node->add(checkAdd(id(), previous(), "identifier", "after data type"));
 
                 while (auto comma = match(COMMA_OP)) {
                     node->add(TerminalNode::make(comma));
-                    node->add(checkAdd(
-                        id(), previous(),
-                        "Expected another identifier after comma operator ',' in a machine instance declaration "
-                        "statement."
-                    ));
+                    node->add(checkAdd(id(), previous(), "identifier", "after ',' "));
                 }
 
-                auto sc =
-                    consume(SEMICOLON_DELIM, "Expected a semicolon ';' after machine instance declaration statement.");
+                auto sc = consume(SEMICOLON_DELIM, ";", "after machine instance declaration statement");
                 node->add(TerminalNode::make(sc));
                 return true;
             }
@@ -1762,7 +1643,11 @@ private:
         }
     }
 
-    Ref<Token> consume(TokenType type, const std::string &message) {
+    std::string foundToken(const Ref<Token> &tok) {
+        return tok->type() != END_OF_FILE ? "'" + tok->lexeme() + "'" : "end of file";
+    }
+
+    Ref<Token> consume(TokenType type, const std::string_view &what, const std::string_view &context = "") {
         if (!isAtEnd()) {
             validateToken(peek());
         }
@@ -1770,13 +1655,36 @@ private:
             return advance();
         }
 
-        throw error(peek(), message);
+        std::string msg = "Expected '";
+        msg += what;
+        msg += "' but found " + foundToken(peek());
+
+        if (!context.empty()) {
+            msg += " ";
+            msg += context;
+        }
+
+        throw error(peek(), msg);
     }
 
-    ParseError error(
-        const Ref<Token> &token, const std::string &message,
-        const std::optional<std::string> &tokenString = std::nullopt
-    ) {
+    CST checkAdd(const CST &cst, const Ref<Token> &token, const std::string &what, const std::string &context = "") {
+        if (!cst) {
+            std::string msg = "Must have '" + what + "'";
+            if (!context.empty()) {
+                msg += " " + context;
+            }
+
+            throw error(token, msg);
+        }
+        return cst;
+    }
+
+    ParseError
+    error(const Ref<Token> &token, std::string message, const std::optional<std::string> &tokenString = std::nullopt) {
+        if (message.back() != '.') {
+            message += '.';
+        }
+
         ::error(token, message, tokenString);
         return ParseError(token);
     }
@@ -1800,13 +1708,6 @@ private:
         return peek()->type() == type;
     }
 
-    CST checkAdd(const CST &cst, const Ref<Token> &token, const std::string &message) {
-        if (!cst) {
-            throw error(token, message);
-        }
-        return cst;
-    }
-
     Ref<Token> advance() {
         if (!isAtEnd()) {
             auto tok = m_tokens[m_current++];
@@ -1822,14 +1723,10 @@ private:
     }
 
     bool isAtEnd() {
-        return m_current == m_tokens.size();
+        return peek()->type() == END_OF_FILE;
     }
 
     Ref<Token> peek() {
-        if (isAtEnd()) {
-            return previous();
-        }
-
         return m_tokens[m_current];
     }
 

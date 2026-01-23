@@ -17,6 +17,7 @@ public:
             m_start = m_current;
             scanToken();
         }
+        m_tokens.push_back(std::make_shared<DefToken>(END_OF_FILE, R"(\0)", m_line));
 
         return m_tokens;
     }
