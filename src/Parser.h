@@ -24,7 +24,8 @@ public:
 
 private:
     const TokenVec &m_tokens;
-    Ref<ErrorNode> lastError;
+    Ref<ErrorNode> m_lastError;
+    int64_t m_lastErrorIndex = -1;
     int64_t m_current = 0;
     int64_t leftCurlyEnter = 0;
 
@@ -38,8 +39,8 @@ private:
                 // If Stuck at right curly delim
                 if (check(RIGHT_CURLY_DELIM)) {
                     advance();
-                    if (lastError) {
-                        lastError->setSychronize(peek());
+                    if (m_lastError) {
+                        m_lastError->setSychronize(peek());
                     }
                 }
 
@@ -984,7 +985,7 @@ private:
             }
             catch (ParseError &error) {
                 if (check(WHILE_KEYW)) {
-                    lastError->setSychronize(synchronize(false));
+                    m_lastError->setSychronize(synchronize(false));
                 }
                 throw;
             }
@@ -1308,7 +1309,7 @@ private:
             });
         }
         catch (ParseError &error) {
-            lastError->setSychronize(synchronize(false, currentDepth));
+            m_lastError->setSychronize(synchronize(false, currentDepth));
             throw;
         }
     }
@@ -1662,8 +1663,8 @@ private:
                 node->add(error.node);
             }
             if (error.token) {
-                lastError = ErrorNode::make(error.token, synchronize(endFile));
-                node->add(lastError);
+                m_lastError = ErrorNode::make(error.token, synchronize(endFile));
+                node->add(m_lastError);
                 error.token = nullptr;
             }
 
@@ -1680,9 +1681,7 @@ private:
     }
 
     Ref<Token> consume(TokenType type, const std::string_view &what, const std::string_view &context = "") {
-        if (!isAtEnd()) {
-            validateToken(peek());
-        }
+        validateToken(peek());
         if (check(type)) {
             return advance();
         }
@@ -1725,9 +1724,7 @@ private:
 
     template <typename... TokenType>
     Ref<Token> match(TokenType... types) {
-        if (!isAtEnd()) {
-            validateToken(peek());
-        }
+        validateToken(peek());
         if ((check(types) || ...)) {
             return advance();
         }
@@ -1793,16 +1790,15 @@ private:
             return peek();
         }
 
+        // If stuck at statement start
+        if (m_lastErrorIndex == m_current) {
+            advance();
+        }
+
         auto currentDepth = leftCurlyEnter;
         auto atTopLevelRightCurly = [&]() {
             return !startDepthSkip.has_value() && check(RIGHT_CURLY_DELIM) && leftCurlyEnter == currentDepth;
         };
-
-        if (atTopLevelRightCurly() || isFunctionStart()) {
-            return peek();
-        }
-
-        advance();
 
         while (!isAtEnd()) {
             // skip until exit all nested blocks
@@ -1814,6 +1810,7 @@ private:
             }
 
             if (previous()->type() == SEMICOLON_DELIM || isStatementStart() || atTopLevelRightCurly()) {
+                m_lastErrorIndex = m_current;
                 return peek();
             }
 
@@ -1827,13 +1824,13 @@ private:
         switch (peek()->type()) {
         case MACHINE_TYPE_RESW:
         case STRUCT_TYPE_RESW:
-        case MAC_CONTEXT_RESW:
-        case MAC_FINAL_RESW:
-        case MAC_FINAL_STATE_RESW:
-        case MAC_START_RESW:
-        case MAC_STATE_RESW:
-        case MAC_STATES_RESW:
-        case MAC_TRANSITIONS_RESW:
+        // case MAC_CONTEXT_RESW:
+        // case MAC_FINAL_RESW:
+        // case MAC_FINAL_STATE_RESW:
+        // case MAC_START_RESW:
+        // case MAC_STATE_RESW:
+        // case MAC_STATES_RESW:
+        // case MAC_TRANSITIONS_RESW:
         case UNSIGNED_RESW:
         case CONST_RESW:
         case STATIC_RESW:
