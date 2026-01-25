@@ -16,7 +16,7 @@ public:
 
 class NonTerminalNode : public CSTNode {
 public:
-    explicit NonTerminalNode(const std::string &name)
+    NonTerminalNode(const std::string &name)
     : m_name(name) {}
 
     ordered_json toJson(const std::string &path = "") const override {
@@ -87,8 +87,8 @@ private:
 
 class EpsilonNode : public CSTNode {
 public:
-    EpsilonNode(const Ref<Token> &token)
-    : m_line(token->line()) {}
+    EpsilonNode(size_t line)
+    : m_line(line) {}
 
     ordered_json toJson(const std::string &path = "") const override {
         return ordered_json{
@@ -98,8 +98,8 @@ public:
         };
     }
 
-    static Ref<EpsilonNode> make(const Ref<Token> &token) {
-        return MakeRef<EpsilonNode>(token);
+    static Ref<EpsilonNode> make(size_t line) {
+        return MakeRef<EpsilonNode>(line);
     }
 
 private:
@@ -108,8 +108,8 @@ private:
 
 class ErrorNode : public CSTNode {
 public:
-    ErrorNode(const Ref<Token> &token, const Ref<Token> &synchronize)
-    : m_line(token->line()), m_synchronize(synchronize) {}
+    ErrorNode(size_t line, const Ref<Token> &synchronize)
+    : m_line(line), m_synchronize(synchronize) {}
 
     ordered_json toJson(const std::string &path = "") const {
         if (m_synchronize) {
@@ -140,8 +140,8 @@ public:
         m_synchronize = synchronize;
     }
 
-    static Ref<ErrorNode> make(const Ref<Token> &token, const Ref<Token> &synchronize) {
-        return MakeRef<ErrorNode>(token, synchronize);
+    static Ref<ErrorNode> make(size_t line, const Ref<Token> &synchronize) {
+        return MakeRef<ErrorNode>(line, synchronize);
     }
 
 private:

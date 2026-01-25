@@ -9,10 +9,11 @@ public:
     class ParseError : public std::runtime_error {
     public:
         ParseError(const Ref<Token> &token)
-        : std::runtime_error(""), token(token), node(nullptr) {}
+        : std::runtime_error(""), token(token), nonTermNode(nullptr), errorNode(nullptr) {}
 
         Ref<Token> token;
-        CST node;
+        Ref<NonTerminalNode> nonTermNode;
+        Ref<ErrorNode> errorNode;
     };
 
     Parser(const TokenVec &tokens)
@@ -24,87 +25,92 @@ public:
 
 private:
     const TokenVec &m_tokens;
-    Ref<ErrorNode> m_lastError;
-    int64_t m_lastErrorIndex = -1;
+    int64_t m_lastSynchronize = -1;
     int64_t m_current = 0;
-    int64_t leftCurlyEnter = 0;
+    int64_t m_scopeDepth = 0;
 
     /* ================= Grammar ================= */
 
     // Main Block
     CST sonaBase() {
-        return tryParse("_SONA_BASE", [&](auto node) {
-            Ref<Token> current = nullptr;
-            while (!isAtEnd() && !checkMain()) {
-                // If Stuck at right curly delim
-                if (check(RIGHT_CURLY_DELIM)) {
-                    advance();
-                    if (m_lastError) {
-                        m_lastError->setSychronize(peek());
-                    }
+        try {
+            return tryParse("_SONA_BASE", [&](auto node) {
+                Ref<Token> current = nullptr;
+                while (!isAtEnd() && !checkMain()) {
+                    node->add(offMainList());
                 }
 
-                node->add(offMainList());
-            }
+                auto intType = consume(INT_TYPE_RESW, "int", "for main function");
+                node->add(TerminalNode::make(intType));
 
-            auto intType = consume(INT_TYPE_RESW, "int", "for main function");
-            node->add(TerminalNode::make(intType));
+                auto main = consume(IDENTIFIER, "main", "as main function identifier");
+                node->add(TerminalNode::make(main));
 
-            auto main = consume(IDENTIFIER, "main", "as main function identifier");
-            node->add(TerminalNode::make(main));
+                auto leftParen = consume(LEFT_PAREN_DELIM, "(", "before main function arguments");
+                node->add(TerminalNode::make(leftParen));
 
-            auto leftParen = consume(LEFT_PAREN_DELIM, "(", "before main function arguments");
-            node->add(TerminalNode::make(leftParen));
+                node->add(paramList());
 
-            auto rightParen = consume(RIGHT_PAREN_DELIM, ")", "after main function arguments");
-            node->add(TerminalNode::make(rightParen));
+                auto rightParen = consume(RIGHT_PAREN_DELIM, ")", "after main function arguments");
+                node->add(TerminalNode::make(rightParen));
 
-            auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before main function body");
-            node->add(TerminalNode::make(leftCurly));
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before main function body");
+                node->add(TerminalNode::make(leftCurly));
 
-            node->add(body());
+                node->add(body());
 
-            auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after main function body");
-            node->add(TerminalNode::make(rightCurly));
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after main function body");
+                node->add(TerminalNode::make(rightCurly));
 
-            if (!isAtEnd()) {
-                throw error(peek(), "File must end after the main function");
-            }
+                if (!isAtEnd()) {
+                    throw error(peek(), "File must end after the main function");
+                }
 
-            return true;
-        }, false, true);
+                return true;
+            });
+        }
+        catch (ParseError &error) {
+            m_current = m_tokens.size() - 1;
+            error.errorNode->setSychronize(peek());
+            return error.nonTermNode;
+        }
     }
 
     CST offMainList() {
-        return tryParse("_OFF_MAIN_LIST", [&](auto node) {
-            skipComments();
+        try {
+            return tryParse("_OFF_MAIN_LIST", [&](auto node) {
+                skipComments();
 
-            if (isAtEnd()) {
-                return false;
-            }
+                if (isAtEnd()) {
+                    return false;
+                }
 
-            if (auto stmt = decSign()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = machStmnt()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = machDec()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = structStmnt()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = structDec()) {
-                node->add(stmt);
-                return true;
-            }
-            throw error(peek(), "Invalid global statement");
-        }, false);
+                if (auto stmt = decSign()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = machStmnt()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = machDec()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = structStmnt()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = structDec()) {
+                    node->add(stmt);
+                    return true;
+                }
+                throw error(peek(), "Invalid global statement");
+            });
+        }
+        catch (ParseError &error) {
+            return error.nonTermNode;
+        }
     }
 
     // Global + Data Type
@@ -122,7 +128,7 @@ private:
                 node->add(TerminalNode::make(kw));
             }
             else {
-                node->add(EpsilonNode::make(peek()));
+                node->add(EpsilonNode::make(peek()->line()));
             }
             return true;
         });
@@ -142,22 +148,30 @@ private:
     }
 
     CST dtSuffix() {
-        return tryParse("DT_SUFFIX", [&](auto node) {
-            if (auto stmt = funcStmnt()) {
-                node->add(stmt);
-                return true;
-            }
+        try {
+            return tryParse("DT_SUFFIX", [&](auto node) {
+                if (auto stmt = funcStmnt()) {
+                    node->add(stmt);
+                    return true;
+                }
 
-            auto prev = previous();
-            auto stmt = decStmnt();
-            if (stmt && prev->type() != VOID_TYPE_RESW) {
-                node->add(stmt);
-                auto sc = consume(SEMICOLON_DELIM, ";", "after declaration statement");
-                node->add(TerminalNode::make(sc));
-                return true;
+                auto prev = previous();
+                auto stmt = decStmnt();
+                if (stmt && prev->type() != VOID_TYPE_RESW) {
+                    node->add(stmt);
+                    auto sc = consume(SEMICOLON_DELIM, ";", "after declaration statement");
+                    node->add(TerminalNode::make(sc));
+                    return true;
+                }
+                throw error(peek(), "Invalid end statement after variable or function declaration");
+            });
+        }
+        catch (ParseError &error) {
+            if (match(RIGHT_CURLY_DELIM)) {
+                error.errorNode->setSychronize(peek());
             }
-            throw error(peek(), "Invalid end statement after variable or function declaration");
-        });
+            throw;
+        }
     }
 
     // Body
@@ -174,7 +188,7 @@ private:
             }
 
             if (node->empty()) {
-                node->add(EpsilonNode::make(peek()));
+                node->add(EpsilonNode::make(peek()->line()));
             }
             return true;
         });
@@ -182,69 +196,68 @@ private:
 
     // List of statements
     CST statements() {
-        return tryParse("_STATEMENTS", [&](auto node) {
-            auto bt = m_current; // backtrack index
+        try {
+            return tryParse("_STATEMENTS", [&](auto node) {
+                if (isAtEnd()) {
+                    return false;
+                }
 
-            if (isAtEnd()) {
-                return false;
-            }
-
-            if (auto stmt = fullDecStmt()) {
-                node->add(stmt);
-                return true;
-            }
-            if (auto stmt = machStmnt()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = machDec()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = structStmnt()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = structDec()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = funcCall()) { // Must be called before assignment stmnt (both <id> first)
-                node->add(stmt);
-                auto sc = consume(SEMICOLON_DELIM, ";", "after function call statement");
-                node->add(TerminalNode::make(sc));
-                return true;
-            }
-            else if (auto stmt = assStmnt()) {
-                if (peek()->type() == SEMICOLON_DELIM) {
+                if (auto stmt = fullDecStmt()) {
+                    node->add(stmt);
+                    return true;
+                }
+                if (auto stmt = machStmnt()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = machDec()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = structStmnt()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = structDec()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = funcCall()) {
+                    node->add(stmt);
+                    auto sc = consume(SEMICOLON_DELIM, ";", "after function call statement");
+                    node->add(TerminalNode::make(sc));
+                    return true;
+                }
+                else if (auto stmt = expression()) {
+                    node->add(stmt);
+                    auto sc = consume(SEMICOLON_DELIM, ";", "after expression statement");
+                    node->add(TerminalNode::make(sc));
+                    return true;
+                }
+                else if (auto stmt = assStmnt()) {
                     node->add(stmt);
                     auto sc = consume(SEMICOLON_DELIM, ";", "after assignment statement");
                     node->add(TerminalNode::make(sc));
                     return true;
                 }
-                else {
-                    m_current = bt;
-
-                    node->add(expression());
-                    auto sc = consume(SEMICOLON_DELIM, ";", "after expression statement");
-                    node->add(TerminalNode::make(sc));
+                else if (auto stmt = condStmnt()) {
+                    node->add(stmt);
                     return true;
                 }
-            }
-            else if (auto stmt = condStmnt()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = iterativeStmt()) {
-                node->add(stmt);
-                return true;
-            }
-            else if (auto stmt = returnStmnt()) {
-                node->add(stmt);
-                return true;
-            }
-            throw error(peek(), "Invalid scoped statement");
-        }, false);
+                else if (auto stmt = iterativeStmt()) {
+                    node->add(stmt);
+                    return true;
+                }
+                else if (auto stmt = returnStmnt()) {
+                    node->add(stmt);
+                    return true;
+                }
+                throw error(peek(), "Invalid scoped statement");
+            });
+        }
+        catch (ParseError &error) {
+            return error.nonTermNode;
+        }
     }
 
     // Full Declaration Statement
@@ -288,7 +301,7 @@ private:
                 node->add(expr);
             }
             else {
-                node->add(EpsilonNode::make(peek()));
+                node->add(EpsilonNode::make(peek()->line()));
             }
             return true;
         });
@@ -354,7 +367,7 @@ private:
 
                 while (auto nt = addOp()) {
                     node->add(nt);
-                    node->add(checkAdd(term(), previous(), "expression", "after add or subtract operator."));
+                    node->add(checkAdd(term(), previous(), "expression", "after add or subtract operator"));
                 }
                 return true;
             }
@@ -573,7 +586,7 @@ private:
                 node->add(TerminalNode::make(rightSquare));
             }
             else {
-                node->add(EpsilonNode::make(peek()));
+                node->add(EpsilonNode::make(peek()->line()));
             }
             return true;
         });
@@ -588,7 +601,7 @@ private:
                 node->add(idSuffix());
             }
             else {
-                node->add(EpsilonNode::make(peek()));
+                node->add(EpsilonNode::make(peek()->line()));
             }
             return true;
         });
@@ -721,7 +734,7 @@ private:
                 node->add(op);
             }
             else {
-                node->add(EpsilonNode::make(peek()));
+                node->add(EpsilonNode::make(peek()->line()));
             }
 
             return true;
@@ -757,7 +770,7 @@ private:
                 node->add(tail);
             }
             else {
-                node->add(EpsilonNode::make(peek()));
+                node->add(EpsilonNode::make(peek()->line()));
             }
             return true;
         });
@@ -775,7 +788,7 @@ private:
                 node->add(checkAdd(expression(), previous(), "expression", "after '=' "));
             }
             else {
-                node->add(EpsilonNode::make(peek()));
+                node->add(EpsilonNode::make(peek()->line()));
             }
             return true;
         });
@@ -814,7 +827,7 @@ private:
                 node->add(TerminalNode::make(rightCurly));
             }
             else {
-                node->add(EpsilonNode::make(peek()));
+                node->add(EpsilonNode::make(peek()->line()));
             }
             return true;
         });
@@ -838,7 +851,7 @@ private:
             if (auto ifkw = match(IF_RESW)) {
                 node->add(TerminalNode::make(ifkw));
 
-                auto leftParen = consume(LEFT_PAREN_DELIM, "(", "after 'if' keyword.");
+                auto leftParen = consume(LEFT_PAREN_DELIM, "(", "after 'if' keyword");
                 node->add(TerminalNode::make(leftParen));
                 node->add(checkAdd(expression(), previous(), "expression", "after '(' "));
 
@@ -889,13 +902,13 @@ private:
 
                 node->add(body());
 
-                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after 'else' body statement.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after 'else' body statement");
                 node->add(TerminalNode::make(rightCurly));
 
                 node->add(elseStmnt());
             }
             else {
-                node->add(EpsilonNode::make(peek()));
+                node->add(EpsilonNode::make(peek()->line()));
             }
             return true;
         });
@@ -952,43 +965,35 @@ private:
     // Do-While
     CST doWhileStmt() {
         return tryParse("DO_WHILE_STMT", [&](auto node) {
-            try {
-                if (auto doKw = match(DO_KEYW)) {
-                    node->add(TerminalNode::make(doKw));
+            if (auto doKw = match(DO_KEYW)) {
+                node->add(TerminalNode::make(doKw));
 
-                    auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before 'do while' body statement.");
-                    node->add(TerminalNode::make(leftCurly));
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before 'do while' body statement");
+                node->add(TerminalNode::make(leftCurly));
 
-                    node->add(body());
+                node->add(body());
 
-                    auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after 'do while' body statement.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after 'do while' body statement");
 
-                    node->add(TerminalNode::make(rightCurly));
+                node->add(TerminalNode::make(rightCurly));
 
-                    auto whileKw = consume(WHILE_KEYW, "while", "keyword after '}' ");
-                    node->add(TerminalNode::make(whileKw));
+                auto whileKw = consume(WHILE_KEYW, "while", "keyword after '}' ");
+                node->add(TerminalNode::make(whileKw));
 
-                    auto leftParen = consume(LEFT_PAREN_DELIM, "(", "after 'while' keyword.");
+                auto leftParen = consume(LEFT_PAREN_DELIM, "(", "after 'while' keyword");
 
-                    node->add(TerminalNode::make(leftParen));
-                    node->add(checkAdd(expression(), previous(), "expression", "after '(' "));
+                node->add(TerminalNode::make(leftParen));
+                node->add(checkAdd(expression(), previous(), "expression", "after '(' "));
 
-                    auto rightParen = consume(RIGHT_PAREN_DELIM, ")", "after expression");
-                    node->add(TerminalNode::make(rightParen));
+                auto rightParen = consume(RIGHT_PAREN_DELIM, ")", "after expression");
+                node->add(TerminalNode::make(rightParen));
 
-                    auto sc = consume(SEMICOLON_DELIM, ";", "after 'do while' statement");
-                    node->add(TerminalNode::make(sc));
+                auto sc = consume(SEMICOLON_DELIM, ";", "after 'do while' statement");
+                node->add(TerminalNode::make(sc));
 
-                    return true;
-                }
-                return false;
+                return true;
             }
-            catch (ParseError &error) {
-                if (check(WHILE_KEYW)) {
-                    m_lastError->setSychronize(synchronize(false));
-                }
-                throw;
-            }
+            return false;
         });
     }
 
@@ -1006,19 +1011,19 @@ private:
                 node->add(TerminalNode::make(scFirst));
 
                 node->add(checkAdd(expression(), previous(), "expression", "to be the condition"));
-                auto scSecond = consume(SEMICOLON_DELIM, ";", "after condition.");
+                auto scSecond = consume(SEMICOLON_DELIM, ";", "after condition");
                 node->add(TerminalNode::make(scSecond));
 
                 node->add(forCounter());
                 auto rightParen = consume(RIGHT_PAREN_DELIM, ")", "after counter");
                 node->add(TerminalNode::make(rightParen));
 
-                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before 'for' body statement.");
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before 'for' body statement");
                 node->add(TerminalNode::make(leftCurly));
 
                 node->add(body());
 
-                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after 'for' body statement.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after 'for' body statement");
                 node->add(TerminalNode::make(rightCurly));
                 return true;
             }
@@ -1038,7 +1043,7 @@ private:
                 }
             }
             else {
-                node->add(EpsilonNode::make(peek()));
+                node->add(EpsilonNode::make(peek()->line()));
             }
 
             return true;
@@ -1064,7 +1069,7 @@ private:
                 node->add(checkAdd(expression(), previous(), "expression", "after '=' "));
             }
             else {
-                node->add(EpsilonNode::make(peek()));
+                node->add(EpsilonNode::make(peek()->line()));
             }
             return true;
         });
@@ -1076,7 +1081,7 @@ private:
                 node->add(stmt);
             }
             else {
-                node->add(EpsilonNode::make(peek()));
+                node->add(EpsilonNode::make(peek()->line()));
             }
             return true;
         });
@@ -1135,7 +1140,7 @@ private:
                 }
             }
             else {
-                node->add(EpsilonNode::make(peek()));
+                node->add(EpsilonNode::make(peek()->line()));
             }
             return true;
         });
@@ -1173,7 +1178,7 @@ private:
                 }
             }
             else {
-                node->add(EpsilonNode::make(peek()));
+                node->add(EpsilonNode::make(peek()->line()));
             }
             return true;
         });
@@ -1209,16 +1214,16 @@ private:
         return tryParse("STRUCT_STMNT", [&](auto node) {
             if (auto kw = match(STRUCT_TYPE_RESW)) {
                 node->add(TerminalNode::make(kw));
-                node->add(checkAdd(structType(), previous(), "identifier", "after 'struct' keyword."));
+                node->add(checkAdd(structType(), previous(), "identifier", "after 'struct' keyword"));
 
-                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before struct body.");
+                auto leftCurly = consume(LEFT_CURLY_DELIM, "{", "before struct body");
                 node->add(TerminalNode::make(leftCurly));
 
                 while (auto body = structBody()) {
                     node->add(body);
                 }
 
-                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after struct body.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after struct body");
                 node->add(TerminalNode::make(rightCurly));
                 return true;
             }
@@ -1285,13 +1290,13 @@ private:
     }
 
     CST machStmnt() {
-        int64_t currentDepth = leftCurlyEnter;
+        int64_t topDepth = m_scopeDepth;
 
         try {
             return tryParse("MACH_STMNT", [&](auto node) {
                 if (auto mach = match(MACHINE_TYPE_RESW)) {
                     node->add(TerminalNode::make(mach));
-                    node->add(checkAdd(machType(), previous(), "identifier", "after 'Machine' keyword."));
+                    node->add(checkAdd(machType(), previous(), "identifier", "after 'Machine' keyword"));
 
                     auto eq = consume(EQUAL_ASS_OP, "=", "after machine declaration");
                     node->add(TerminalNode::make(eq));
@@ -1309,7 +1314,10 @@ private:
             });
         }
         catch (ParseError &error) {
-            m_lastError->setSychronize(synchronize(false, currentDepth));
+            while (!isAtEnd() && m_scopeDepth > topDepth) {
+                advance();
+            }
+            error.errorNode->setSychronize(synchronize());
             throw;
         }
     }
@@ -1330,9 +1338,8 @@ private:
             }
 
             throw error(
-                previous(),
-                "Machine body should not be empty and should follow the base order from top to bottom: @context, "
-                "@states, @start, @transitions, @state"
+                previous(), "Machine body should not be empty and should follow the base order from top to bottom: "
+                            "[@final], @context, @states, @start, @transitions, @state, [@finalState]"
             );
         });
     }
@@ -1351,7 +1358,7 @@ private:
             }
             throw error(
                 peek(), "Machine should at least have a @transitions and @state declaration"
-                        "(@transitions should ALWAYS be first)."
+                        "(@transitions should ALWAYS be first)"
             );
         });
     }
@@ -1388,7 +1395,7 @@ private:
                 node->add(dec);
             }
             else {
-                node->add(EpsilonNode::make(peek()));
+                node->add(EpsilonNode::make(peek()->line()));
             }
             return true;
         });
@@ -1458,7 +1465,7 @@ private:
                 node->add(TerminalNode::make(sc));
                 return true;
             }
-            throw error(previous(), "Machine must have @states declaration after @context.");
+            throw error(previous(), "Machine must have @states declaration after @context");
         });
     }
 
@@ -1528,14 +1535,14 @@ private:
                     node->add(trans);
                 }
                 else {
-                    node->add(EpsilonNode::make(peek()));
+                    node->add(EpsilonNode::make(peek()->line()));
                 }
 
                 while (auto trans = transition()) {
                     node->add(trans);
                 }
 
-                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after @transitions list.");
+                auto rightCurly = consume(RIGHT_CURLY_DELIM, "}", "after @transitions list");
                 node->add(TerminalNode::make(rightCurly));
 
                 return true;
@@ -1566,7 +1573,7 @@ private:
                 auto output = consume(STR_LITERAL, "string literal", "after '=' ");
                 node->add(TerminalNode::make(output));
 
-                auto sc = consume(SEMICOLON_DELIM, ";", "after @transitions statement.");
+                auto sc = consume(SEMICOLON_DELIM, ";", "after @transitions statement");
                 node->add(TerminalNode::make(sc));
                 return true;
             }
@@ -1648,31 +1655,28 @@ private:
                m_tokens[m_current + 1]->lexeme() == "main";
     }
 
-    template <typename Func>
-    CST tryParse(const std::string &nodeName, Func fn, bool rethrow = true, bool endFile = false) {
-        auto node = NonTerminalNode::make(nodeName);
+    CST tryParse(const std::string &nodeName, std::function<bool(Ref<NonTerminalNode>)> fn) {
+        auto nonTermNode = NonTerminalNode::make(nodeName);
 
         try {
-            if (!fn(node)) {
+            if (!fn(nonTermNode)) {
                 return nullptr;
             }
-            return node;
+            return nonTermNode;
         }
         catch (ParseError &error) {
-            if (error.node) {
-                node->add(error.node);
+            if (error.nonTermNode) {
+                nonTermNode->add(error.nonTermNode);
             }
             if (error.token) {
-                m_lastError = ErrorNode::make(error.token, synchronize(endFile));
-                node->add(m_lastError);
+                auto errorNode = ErrorNode::make(error.token->line(), synchronize());
+                error.errorNode = errorNode;
+                nonTermNode->add(errorNode);
                 error.token = nullptr;
             }
 
-            error.node = node;
-            if (rethrow) {
-                throw;
-            }
-            return error.node;
+            error.nonTermNode = nonTermNode;
+            throw;
         }
     }
 
@@ -1681,7 +1685,6 @@ private:
     }
 
     Ref<Token> consume(TokenType type, const std::string_view &what, const std::string_view &context = "") {
-        validateToken(peek());
         if (check(type)) {
             return advance();
         }
@@ -1712,13 +1715,12 @@ private:
         return cst;
     }
 
-    ParseError
-    error(const Ref<Token> &token, std::string message, const std::optional<std::string> &tokenString = std::nullopt) {
+    ParseError error(const Ref<Token> &token, std::string message) {
         if (message.back() != '.') {
             message += '.';
         }
 
-        ::error(token, message, tokenString);
+        ::error(token, message);
         return ParseError(token);
     }
 
@@ -1744,10 +1746,10 @@ private:
             auto tok = m_tokens[m_current++];
 
             if (tok->type() == LEFT_CURLY_DELIM) {
-                ++leftCurlyEnter;
+                ++m_scopeDepth;
             }
             else if (tok->type() == RIGHT_CURLY_DELIM) {
-                --leftCurlyEnter;
+                --m_scopeDepth;
             }
         }
         return previous();
@@ -1775,42 +1777,24 @@ private:
         }
 
         if (token->lexeme()[0] == '\"') {
-            throw error(token, "Non terminated \" in a string literal (Usage: \"Hello\" or \"123\")", "CHAR_LITERAL");
+            throw error(token, "Non terminated \" in a string literal");
         }
         if (token->lexeme()[0] == '\'') {
-            throw error(token, "Non terminated ' in a character literal (Usage: 'x' or '1')", "CHAR_LITERAL");
+            throw error(token, "Non terminated ' in a character literal");
         }
 
         throw error(token, "Undefined identifier or keyword");
     }
 
-    Ref<Token> synchronize(bool endFile, std::optional<int64_t> startDepthSkip = std::nullopt) {
-        if (endFile) {
-            m_current = m_tokens.size() - 1;
-            return peek();
-        }
-
-        // If stuck at statement start
-        if (m_lastErrorIndex == m_current) {
+    Ref<Token> synchronize() {
+        // Advance if synchronize is repeated on same token or it is unknown
+        if (check(UNKNOWN) || m_lastSynchronize == m_current) {
             advance();
         }
 
-        auto currentDepth = leftCurlyEnter;
-        auto atTopLevelRightCurly = [&]() {
-            return !startDepthSkip.has_value() && check(RIGHT_CURLY_DELIM) && leftCurlyEnter == currentDepth;
-        };
-
         while (!isAtEnd()) {
-            // skip until exit all nested blocks
-            if (startDepthSkip.has_value()) {
-                if (leftCurlyEnter > startDepthSkip) {
-                    advance();
-                    continue;
-                }
-            }
-
-            if (previous()->type() == SEMICOLON_DELIM || isStatementStart() || atTopLevelRightCurly()) {
-                m_lastErrorIndex = m_current;
+            if (previous()->type() == SEMICOLON_DELIM || check(RIGHT_CURLY_DELIM) || isStatementStart()) {
+                m_lastSynchronize = m_current;
                 return peek();
             }
 
@@ -1824,13 +1808,15 @@ private:
         switch (peek()->type()) {
         case MACHINE_TYPE_RESW:
         case STRUCT_TYPE_RESW:
-        // case MAC_CONTEXT_RESW:
-        // case MAC_FINAL_RESW:
-        // case MAC_FINAL_STATE_RESW:
-        // case MAC_START_RESW:
-        // case MAC_STATE_RESW:
-        // case MAC_STATES_RESW:
-        // case MAC_TRANSITIONS_RESW:
+        case USER_MACHINE_RESW:
+        case USER_STRUCT_RESW:
+        case MAC_CONTEXT_RESW:
+        case MAC_FINAL_RESW:
+        case MAC_FINAL_STATE_RESW:
+        case MAC_START_RESW:
+        case MAC_STATE_RESW:
+        case MAC_STATES_RESW:
+        case MAC_TRANSITIONS_RESW:
         case UNSIGNED_RESW:
         case CONST_RESW:
         case STATIC_RESW:
@@ -1841,6 +1827,7 @@ private:
         case BOOL_TYPE_RESW:
         case CHAR_TYPE_RESW:
         case VOID_TYPE_RESW:
+        case IDENTIFIER:
         case FOR_KEYW:
         case IF_RESW:
         case WHILE_KEYW:
@@ -1850,48 +1837,6 @@ private:
             return false;
             break;
         }
-    }
-
-    bool isFunctionStart() {
-        int64_t i = m_current;
-        const int64_t n = m_tokens.size();
-
-        while (i < n) {
-            auto t = m_tokens[i]->type();
-            if (t == UNSIGNED_RESW || t == CONST_RESW || t == STATIC_RESW) {
-                ++i;
-            }
-            else {
-                break;
-            }
-        }
-
-        if (i >= n) {
-            return false;
-        }
-
-        switch (m_tokens[i]->type()) {
-        case INT_TYPE_RESW:
-        case FLOAT_TYPE_RESW:
-        case DOUBLE_TYPE_RESW:
-        case STRING_TYPE_RESW:
-        case BOOL_TYPE_RESW:
-        case CHAR_TYPE_RESW:
-        case VOID_TYPE_RESW:
-            break;
-        default:
-            return false;
-        }
-
-        if (++i >= n || m_tokens[i]->type() != IDENTIFIER) {
-            return false;
-        }
-
-        if (++i >= n || m_tokens[i]->type() != LEFT_PAREN_DELIM) {
-            return false;
-        }
-
-        return true;
     }
 
     void skipComments() {

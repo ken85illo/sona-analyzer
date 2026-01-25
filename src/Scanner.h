@@ -3,6 +3,7 @@
 #include "Token.h"
 #include "TokenType.h"
 #include "TokenUtils.h"
+#include "TokenWords.h"
 
 class Scanner {
     using IdSet = std::unordered_set<std::string>;
@@ -16,7 +17,7 @@ public:
             m_start = m_current;
             scanToken();
         }
-        m_tokens.push_back(std::make_shared<DefToken>(END_OF_FILE, R"(\0)", m_line));
+        m_tokens.push_back(std::make_shared<DefToken>(END_OF_FILE, R"(\0)", m_line - 1));
 
         return m_tokens;
     }
@@ -51,12 +52,169 @@ private:
     size_t m_current = 0;
     size_t m_line = 1;
 
-    void scanToken();
-    void string();
-    void character();
-    void number();
-    void specWords();
-    void word();
+    void scanToken() {
+        char c = advance();
+
+        switch (c) {
+        case '(':
+            addToken(LEFT_PAREN_DELIM);
+            break;
+        case ')':
+            addToken(RIGHT_PAREN_DELIM);
+            break;
+        case '{':
+            addToken(LEFT_CURLY_DELIM);
+            break;
+        case '}':
+            addToken(RIGHT_CURLY_DELIM);
+            break;
+        case '[':
+            addToken(LEFT_SQUARE_DELIM);
+            break;
+        case ']':
+            addToken(RIGHT_SQUARE_DELIM);
+            break;
+        case ',':
+            addToken(COMMA_OP);
+            break;
+        case '.':
+            addToken(DOT_OP);
+            break;
+        case ';':
+            addToken(SEMICOLON_DELIM);
+            break;
+        case '*':
+            handleAsterisk();
+            break;
+        case '%':
+            addToken(match('=') ? MODULO_ASS_OP : MODULO_OP);
+            break;
+        case '-':
+            handleMinus();
+            break;
+        case '+':
+            handlePlus();
+            break;
+        case '&':
+            handleDouble('&', AND_LOG_OP);
+            break;
+        case '|':
+            handleDouble('|', OR_LOG_OP);
+            break;
+        case '!':
+            addToken(match('=') ? NOT_EQUAL_REL_OP : NOT_LOG_OP);
+            break;
+        case '=':
+            addToken(match('=') ? EQUAL_REL_OP : EQUAL_ASS_OP);
+            break;
+        case '<':
+            addToken(match('=') ? LESS_EQUAL_REL_OP : LESS_REL_OP);
+            break;
+        case '>':
+            addToken(match('=') ? GREATER_EQUAL_REL_OP : GREATER_REL_OP);
+            break;
+        case '/':
+            handleSlash();
+        case ' ':
+        case '\t':
+            break;
+        case '\r':
+        case '\n':
+            ++m_line;
+            break;
+        case '"':
+            string();
+            break;
+        case '\'':
+            character();
+            break;
+        default:
+            if (TokenUtils::isDigit(c)) {
+                number();
+            }
+            else if (TokenUtils::isAlpha(c) || c == '@') {
+                word();
+            }
+            else {
+                addToken(UNKNOWN);
+            }
+
+            break;
+        }
+    }
+
+    void string() {
+        while (peek() != '"' && peek() != '\0' && peek() != '\n') {
+            advance();
+        }
+
+        if (peek() != '"') {
+            addToken(UNKNOWN);
+            return;
+        }
+
+        // Skip the last double quote
+        advance();
+        addToken(STR_LITERAL);
+    }
+
+    void character() {
+        if (TokenUtils::isAlphaNumeric(peek())) {
+            // Consume char
+            advance();
+            if (match('\'')) {
+                addToken(CHAR_LITERAL);
+                return;
+            }
+        }
+
+        addToken(UNKNOWN);
+    }
+
+    void number() {
+        TokenType type = INT_LITERAL;
+
+        while (TokenUtils::isDigit(peek())) {
+            advance();
+        }
+
+        if (peek() == '.' && TokenUtils::isDigit(peekNext())) {
+            advance();
+            while (TokenUtils::isDigit(peek())) {
+                advance();
+            }
+            type = FLT_LITERAL;
+        }
+
+        addToken(type);
+    }
+
+    void word() {
+        while (TokenUtils::isAlphaNumeric(peek())) {
+            advance();
+        };
+
+        std::string text = TokenUtils::substring(m_start, m_current, m_source);
+
+        auto prevToken = lastToken();
+        bool isSpecialWord = specialWords.contains(text);
+        bool isUserDefinedType = TokenUtils::isUserType(prevToken) || m_userDefinedTokens.contains(text);
+        bool isIdentifier = TokenUtils::isPrimitiveType(prevToken) || userDefIdentifier() ||
+                            m_idsDefined.contains(text) || validIdentifier();
+
+        if (isSpecialWord) {
+            addToken(specialWords.at(text));
+        }
+        else if (isUserDefinedType) {
+            addUserDefinedToken(prevToken);
+        }
+        else if (isIdentifier) {
+            addIdentifier();
+        }
+        else {
+            addToken(UNKNOWN);
+        }
+    }
 
     void addToken(TokenType type, std::optional<size_t> line = std::nullopt) {
         std::string text = TokenUtils::substring(m_start, m_current, m_source);
