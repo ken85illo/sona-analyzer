@@ -77,6 +77,7 @@ private:
     }
 
     CST offMainList() {
+        auto firstIndex = m_current;
         try {
             return tryParse("_OFF_MAIN_LIST", [&](auto node) {
                 skipComments();
@@ -109,6 +110,19 @@ private:
             });
         }
         catch (ParseError &error) {
+            if (firstIndex == m_current) {
+                advance();
+                error.errorNode->setSychronize(synchronize());
+            }
+
+            if (check(RIGHT_CURLY_DELIM)) {
+                advance();
+                while (check(RIGHT_CURLY_DELIM)) {
+                    advance();
+                }
+                error.errorNode->setSychronize(peek());
+            }
+
             return error.nonTermNode;
         }
     }
@@ -196,6 +210,7 @@ private:
 
     // List of statements
     CST statements() {
+        auto firstIndex = m_current;
         try {
             return tryParse("_STATEMENTS", [&](auto node) {
                 if (isAtEnd()) {
@@ -256,6 +271,11 @@ private:
             });
         }
         catch (ParseError &error) {
+            if (firstIndex == m_current) {
+                advance();
+                error.errorNode->setSychronize(synchronize());
+            }
+
             return error.nonTermNode;
         }
     }
@@ -1732,8 +1752,10 @@ private:
     }
 
     ParseError error(Ref<Token> token, std::string message) {
-        skipComments();
-        token = peek();
+        if (token->type() == LINE_COMNT || token->type() == MULTILINE_COMNT) {
+            skipComments();
+            token = peek();
+        }
 
         if (message.back() != '.') {
             message += '.';
@@ -1808,8 +1830,8 @@ private:
     Ref<Token> synchronize() {
         skipComments();
 
-        // Advance if synchronize is repeated on same token or it is unknown
-        if (check(UNKNOWN) || m_lastSynchronize == m_current) {
+        // Advance if synchronize is repeated on same token
+        if (m_lastSynchronize == m_current) {
             advance();
         }
 
@@ -1848,7 +1870,6 @@ private:
         case BOOL_TYPE_RESW:
         case CHAR_TYPE_RESW:
         case VOID_TYPE_RESW:
-        case IDENTIFIER:
         case FOR_KEYW:
         case IF_RESW:
         case WHILE_KEYW:
