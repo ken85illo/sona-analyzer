@@ -228,15 +228,15 @@ private:
                     node->add(TerminalNode::make(sc));
                     return true;
                 }
-                else if (auto stmt = expression()) {
-                    node->add(stmt);
-                    auto sc = consume(SEMICOLON_DELIM, ";", "after expression statement");
-                    node->add(TerminalNode::make(sc));
-                    return true;
-                }
                 else if (auto stmt = assStmnt()) {
                     node->add(stmt);
                     auto sc = consume(SEMICOLON_DELIM, ";", "after assignment statement");
+                    node->add(TerminalNode::make(sc));
+                    return true;
+                }
+                else if (auto stmt = expression()) {
+                    node->add(stmt);
+                    auto sc = consume(SEMICOLON_DELIM, ";", "after expression statement");
                     node->add(TerminalNode::make(sc));
                     return true;
                 }
@@ -631,45 +631,53 @@ private:
     // Constructing Numbers
     CST number() {
         return tryParse("NUMBER", [&](auto node) {
+            auto bt = m_current;
             if (auto op = match(INT_LITERAL)) {
                 auto test = TerminalNode::make(op);
                 node->add(test);
                 return true;
             }
             else if (auto op = match(POSITIVE_OP)) {
-                node->add(TerminalNode::make(op));
-                auto operand = match(INT_LITERAL);
-                node->add(TerminalNode::make(operand));
-                return true;
+                if (auto operand = match(INT_LITERAL)) {
+                    node->add(TerminalNode::make(op));
+                    node->add(TerminalNode::make(operand));
+                    return true;
+                }
             }
             else if (auto op = match(NEGATIVE_OP)) {
-                node->add(TerminalNode::make(op));
-                auto operand = match(INT_LITERAL);
-                node->add(TerminalNode::make(operand));
-                return true;
+                if (auto operand = match(INT_LITERAL)) {
+                    node->add(TerminalNode::make(op));
+                    node->add(TerminalNode::make(operand));
+                    return true;
+                }
             }
+            m_current = bt;
             return false;
         });
     }
 
     CST realNum() {
         return tryParse("REAL_NUM", [&](auto node) {
+            auto bt = m_current;
             if (auto op = match(FLT_LITERAL)) {
                 node->add(TerminalNode::make(op));
                 return true;
             }
             else if (auto op = match(POSITIVE_OP)) {
-                node->add(TerminalNode::make(op));
-                auto operand = match(FLT_LITERAL);
-                node->add(TerminalNode::make(operand));
-                return true;
+                if (auto operand = match(FLT_LITERAL)) {
+                    node->add(TerminalNode::make(op));
+                    node->add(TerminalNode::make(operand));
+                    return true;
+                }
             }
             else if (auto op = match(NEGATIVE_OP)) {
-                node->add(TerminalNode::make(op));
-                auto operand = match(FLT_LITERAL);
-                node->add(TerminalNode::make(operand));
-                return true;
+                if (auto operand = match(FLT_LITERAL)) {
+                    node->add(TerminalNode::make(op));
+                    node->add(TerminalNode::make(operand));
+                    return true;
+                }
             }
+            m_current = bt;
             return false;
         });
     }
@@ -694,6 +702,14 @@ private:
     // Basic Assignment Structure
     CST assStmnt() {
         return tryParse("ASS_STMNT", [&](auto node) {
+            auto bt = m_current;
+
+            if (match(IDENTIFIER) && (addOp() || multOp() || relOp() || logOp())) {
+                m_current = bt;
+                return false;
+            }
+
+            m_current = bt;
             if (auto ass = assSingle()) {
                 node->add(ass);
 
@@ -1294,7 +1310,7 @@ private:
 
         try {
             return tryParse("MACH_STMNT", [&](auto node) {
-                if (auto mach = match(MACHINE_TYPE_RESW)) {
+                if (auto mach = match(MACHINE_TYPE_RESW)) { // Machine identifier  = {}
                     node->add(TerminalNode::make(mach));
                     node->add(checkAdd(machType(), previous(), "identifier", "after 'Machine' keyword"));
 
@@ -1703,7 +1719,7 @@ private:
         throw error(peek(), msg);
     }
 
-    CST checkAdd(const CST &cst, const Ref<Token> &token, const std::string &what, const std::string &context = "") {
+    CST checkAdd(const CST &cst, Ref<Token> token, const std::string &what, const std::string &context = "") {
         if (!cst) {
             std::string msg = "Must have '" + what + "'";
             if (!context.empty()) {
@@ -1715,7 +1731,10 @@ private:
         return cst;
     }
 
-    ParseError error(const Ref<Token> &token, std::string message) {
+    ParseError error(Ref<Token> token, std::string message) {
+        skipComments();
+        token = peek();
+
         if (message.back() != '.') {
             message += '.';
         }
@@ -1787,6 +1806,8 @@ private:
     }
 
     Ref<Token> synchronize() {
+        skipComments();
+
         // Advance if synchronize is repeated on same token or it is unknown
         if (check(UNKNOWN) || m_lastSynchronize == m_current) {
             advance();

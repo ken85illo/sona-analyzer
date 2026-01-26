@@ -302,7 +302,7 @@ private:
             return;
         }
 
-        bool isBinary = TokenUtils::isValue(prev) || prev == STR_LITERAL;
+        bool isBinary = TokenUtils::isValue(prev);
         addToken(isBinary ? binary : unary);
     }
 
